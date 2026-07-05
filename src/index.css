@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-white:   #FFFFFF;
+  --color-off:     #F7F7F5;
+  --color-light:   #EBEBEB;
+  --color-border:  #DEDEDE;
+  --color-muted:   #777777;
+  --color-dark:    #1C1C1C;
+  --color-black:   #0A0A0A;
+  --color-brand:   #FF7B00;
+  --color-brand-d: #D96600;
+
+  --font-display: 'Montserrat', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'Space Mono', monospace;
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.35; transform: scale(0.55); }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
+
+body {
+  background: #fff;
+  color: #0A0A0A;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+::selection { background: #FF7B00; color: #fff; }
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: #F7F7F5; }
+::-webkit-scrollbar-thumb { background: #DEDEDE; }
+::-webkit-scrollbar-thumb:hover { background: #999; }
+
+/* ── Typography ─────────────────────────────────────── */
+.display {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+}
+.mono { font-family: 'Space Mono', monospace; }
+
+/* ── Buttons ────────────────────────────────────────── */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: 1rem 2.5rem;
+  background: #FF7B00; color: #fff;
+  font-family: 'Inter', sans-serif; font-weight: 700;
+  font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+  transition: background .2s, transform .15s;
+  text-decoration: none; border: none; cursor: pointer;
+  white-space: nowrap;
+}
+.btn-primary:hover  { background: #D96600; }
+.btn-primary:active { transform: scale(.97); }
+
+.btn-dark {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: 1rem 2.5rem;
+  background: #0A0A0A; color: #fff;
+  font-family: 'Inter', sans-serif; font-weight: 700;
+  font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+  transition: background .2s, transform .15s;
+  text-decoration: none; border: none; cursor: pointer;
+  white-space: nowrap;
+}
+.btn-dark:hover  { background: #1C1C1C; }
+.btn-dark:active { transform: scale(.97); }
+
+.btn-outline {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: 1rem 2.5rem;
+  border: 1.5px solid #0A0A0A; color: #0A0A0A;
+  font-family: 'Inter', sans-serif; font-weight: 700;
+  font-size: .75rem; letter-spacing: .12em; text-transform: uppercase;
+  background: transparent; text-decoration: none; cursor: pointer;
+  transition: background .2s, color .2s, transform .15s;
+  white-space: nowrap;
+}
+.btn-outline:hover  { background: #0A0A0A; color: #fff; }
+.btn-outline:active { transform: scale(.97); }
+
+/* ── Labels ─────────────────────────────────────────── */
+.eyebrow {
+  font-family: 'Space Mono', monospace;
+  font-size: .68rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: #FF7B00;
+  display: block;
+}
+.eyebrow-dark {
+  font-family: 'Space Mono', monospace;
+  font-size: .68rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: #777;
+  display: block;
+}
+
+/* ── Layout ─────────────────────────────────────────── */
+.wrap {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(1.5rem, 5vw, 7rem);
+  padding-right: clamp(1.5rem, 5vw, 7rem);
+}
+
+/* ── Section spacing ────────────────────────────────── */
+.section { padding: clamp(5rem, 10vh, 9rem) 0; }
+.section-lg { padding: clamp(7rem, 13vh, 11rem) 0; } 
