@@ -12,10 +12,11 @@ function AnimatedRoutes() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/"           element={<Home />} />
-        <Route path="/expedicoes" element={<Expeditions />} />
-        <Route path="/catalogo"   element={<Catalog />} />
-        <Route path="/contato"    element={<Contact />} />
+        <Route path="/"                element={<Home />} />
+        <Route path="/expedicoes"      element={<Expeditions />} />
+        {/* Catálogo usa subrotas (vitrine + detalhe), então precisa do /* */}
+        <Route path="/catalogo/*"      element={<Catalog />} />
+        <Route path="/contato"         element={<Contact />} />
       </Routes>
     </AnimatePresence>
   )
