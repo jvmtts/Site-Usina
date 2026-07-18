@@ -2,7 +2,9 @@ import { useRef, useState, useEffect, useCallback } from 'react'
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ChevronLeft, ChevronRight, ArrowUpRight } from 'lucide-react'
+import { patrocinadores, Patrocinador } from '../data/patrocinadores'
 
+/* ── Slides da galeria ───────────────────────────────────────────── */
 const slides = [
   { src: '/images/image1.png', caption: 'Capitólio — Minas Gerais' },
   { src: '/images/image2.png', caption: 'Lago de Furnas — MG' },
@@ -11,6 +13,7 @@ const slides = [
   { src: '/images/image5.png', caption: 'Serra da Canastra — MG' },
 ]
 
+/* ── Countdown ───────────────────────────────────────────────────── */
 function useCountdown(target: string) {
   const calc = () => {
     const diff = new Date(target).getTime() - Date.now()
@@ -62,6 +65,7 @@ function Countdown({ date }: { date: string }) {
   )
 }
 
+/* ── Reveal ──────────────────────────────────────────────────────── */
 function Reveal({ children, delay = 0, style = {}, className = '' }:
   { children: React.ReactNode; delay?: number; style?: React.CSSProperties; className?: string }) {
   const ref    = useRef(null)
@@ -72,10 +76,11 @@ function Reveal({ children, delay = 0, style = {}, className = '' }:
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.85, delay, ease: [0.16, 1, 0.3, 1] }}>
       {children}
-    </motion.div>
+    </motion.div> 
   )
 }
 
+/* ── Carousel ────────────────────────────────────────────────────── */
 function Carousel() {
   const [cur, setCur]       = useState(0)
   const [dir, setDir]       = useState(1)
@@ -101,7 +106,7 @@ function Carousel() {
           variants={{
             enter: (d: number) => ({ x: d > 0 ? '100%' : '-100%' }),
             center: { x: 0 },
-            exit: (d: number) => ({ x: d > 0 ? '-100%' : '100%' }),
+            exit:  (d: number) => ({ x: d > 0 ? '-100%' : '100%' }),
           }}
           initial="enter" animate="center" exit="exit"
           transition={{ duration: 0.85, ease: [0.77, 0, 0.18, 1] }}
@@ -143,6 +148,135 @@ function Carousel() {
   )
 }
 
+/* ── Faixa de Patrocinadores ─────────────────────────────────────── */
+function FaixaPatrocinadores() {
+  const ativos  = patrocinadores.filter((p: Patrocinador) => p.ativo) 
+  const VISIBLE = 4
+  const [cur, setCur]       = useState(0)
+  const [fading, setFading] = useState(false)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFading(true)
+      setTimeout(() => {
+        setCur(prev => (prev + 1) % ativos.length)
+      }, 320)
+    }, 3000)
+    return () => clearInterval(id)
+  }, [ativos.length])
+
+  const visiveis = Array.from({ length: VISIBLE }, (_: unknown, i: number) =>
+    ativos[(cur + i) % ativos.length]
+  )
+
+  return (
+    <section style={{
+      borderTop: '1px solid #EBEBEB',
+      borderBottom: '1px solid #EBEBEB',
+      background: '#F7F7F5',
+      overflow: 'hidden',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '1.1rem 1.25rem',
+          borderRight: '1px solid #EBEBEB',
+          flexShrink: 0,
+        }}>
+          <span className="mono" style={{
+            fontSize: '0.52rem', fontWeight: 700,
+            letterSpacing: '0.2em', textTransform: 'uppercase',
+            color: '#CCCCCC', whiteSpace: 'nowrap',
+            writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+          }}>
+            Parceiros & Patrocinadores
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', flex: 1 }}>
+          {visiveis.map((pat, i) => (
+            <a
+              key={`${pat.id}-${i}`}
+              href={pat.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '1.4rem 1.75rem',
+                borderRight: i < VISIBLE - 1 ? '1px solid #EBEBEB' : 'none',
+                textDecoration: 'none',
+                minHeight: '72px',
+                background: '#F7F7F5',
+                opacity: fading ? 0 : 1,
+                transition: 'opacity 0.32s ease, background 0.22s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#fff' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#F7F7F5' }}
+            >
+              {pat.logo ? (
+                <img
+                  src={pat.logo}
+                  alt={pat.nome}
+                  style={{
+                    maxHeight: '1.75rem', maxWidth: '100%', objectFit: 'contain',
+                    filter: 'grayscale(100%)', opacity: 0.45,
+                    transition: 'filter 0.22s, opacity 0.22s',
+                  }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLImageElement
+                    el.style.filter = 'grayscale(0%)'
+                    el.style.opacity = '1'
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLImageElement
+                    el.style.filter = 'grayscale(100%)'
+                    el.style.opacity = '0.45'
+                  }}
+                />
+              ) : (
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: '0.6rem', fontWeight: 700,
+                    letterSpacing: '0.2em', textTransform: 'uppercase',
+                    color: '#CCCCCC', transition: 'color 0.22s',
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#0A0A0A' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#CCCCCC' }}
+                >
+                  {pat.nome}
+                </span>
+              )}
+            </a>
+          ))}
+        </div>
+
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          padding: '1.1rem 0.875rem',
+          borderLeft: '1px solid #EBEBEB',
+          flexShrink: 0, gap: '0.3rem',
+        }}>
+          {ativos.map((_: unknown, i: number) => (
+            <div
+              key={i}
+              style={{
+                width: '2px',
+                height: i === cur % ativos.length ? '1.1rem' : '0.3rem',
+                background: i === cur % ativos.length ? '#FF7B00' : '#DEDEDE',
+                borderRadius: '1px',
+                transition: 'height 0.35s ease, background 0.35s ease',
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════ */
 export default function Home() {
   const heroRef     = useRef(null)
   const { scrollY } = useScroll()
@@ -150,34 +284,36 @@ export default function Home() {
   const heroOpacity = useTransform(scrollY, [0, 450], [1, 0])
   const heroY       = useTransform(scrollY, [0, 450], [0, 60])
 
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   return (
     <main style={{ background: '#fff' }}>
 
       {/* ══ HERO ══ */}
-      <section ref={heroRef} style={{
-        position: 'relative', height: '100dvh', minHeight: '640px',
-        overflow: 'hidden', background: '#0A0A0A',
-      }}>
-        {/* Foto parallax */}
+      <section ref={heroRef} style={{ position: 'relative', height: '100dvh', minHeight: '640px', overflow: 'hidden', background: '#0A0A0A' }}>
         <motion.div style={{ y: imgY, position: 'absolute', inset: 0, scale: 1.08 }}>
           <img src="/images/hero-bg.png" alt=""
                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%', opacity: 0.5, display: 'block' }} />
         </motion.div>
 
-        {/* Gradiente principal — escurece mais no bottom onde fica o texto */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,10,0.97) 0%, rgba(10,10,10,0.55) 35%, rgba(10,10,10,0.15) 70%, transparent 100%)' }} />
-
-        {/* Gradiente lateral esquerdo — destaca o texto */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(10,10,10,0.6) 0%, transparent 60%)' }} />
 
-        {/* Conteúdo — ancorado embaixo à esquerda, estilo Porsche */}
         <motion.div
           style={{ y: heroY, opacity: heroOpacity, position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2 }}
           className="wrap"
         >
-          <div style={{ paddingBottom: 'clamp(4rem, 8vh, 6rem)', maxWidth: '780px' }}>
-
-            {/* Eyebrow */}
+          <div style={{
+            paddingBottom: 'clamp(4rem, 8vh, 6rem)',
+            maxWidth: '1000px',
+            marginLeft: isMobile ? '0' : 'clamp(8rem, 16vw, 20rem)',
+          }}>
             <motion.div
               initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
@@ -189,38 +325,64 @@ export default function Home() {
               </span>
             </motion.div>
 
-            {/* Título — numa linha só cada palavra, tamanho controlado */}
-            <div style={{ overflow: 'hidden', marginBottom: '0.1em' }}>
-              <motion.h1
-                className="display"
-                initial={{ y: '100%' }} animate={{ y: 0 }}
-                transition={{ duration: 0.9, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                style={{ fontSize: 'clamp(4.5rem, 10vw, 9.5rem)', color: '#fff', lineHeight: 0.9, margin: 0 }}
-              >
-                USINA DO JET
-              </motion.h1>
+            <div style={{
+              position: 'relative',
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center',
+              marginBottom: '1.75rem',
+            }}>
+              {/* --- A MÁGICA FOI FEITA AQUI --- */}
+              <motion.img
+                src="/images/Usina-logo-Preto.png"
+                alt="Usina do Jet"
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.9, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  position: isMobile ? 'static' : 'absolute',
+                  right: isMobile ? 'auto' : '100%',
+                  marginRight: isMobile ? '0' : 'clamp(1rem, 3vw, 2.5rem)',
+                  marginBottom: isMobile ? '1.5rem' : '0',
+                  width: 'clamp(6rem, 16vw, 14.5rem)', // Proporção ideal
+                  height: 'auto',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) invert(1)',
+                }}
+              />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {['USINA', 'DO JET'].map((word, i) => (
+                  <div key={word} style={{ overflow: 'hidden', marginBottom: '-0.05em' }}>
+                    <motion.h1
+                      className="display"
+                      initial={{ y: '100%' }} animate={{ y: 0 }}
+                      transition={{ duration: 0.9, delay: 0.45 + (i * 0.15), ease: [0.16, 1, 0.3, 1] }}
+                      style={{ fontSize: 'clamp(4rem, 11vw, 9.5rem)', color: '#fff', lineHeight: 0.85, margin: 0, whiteSpace: 'nowrap', letterSpacing: '-0.02em' }}
+                    >
+                      {word}
+                    </motion.h1>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Linha laranja decorativa sob o título */}
             <motion.div
               initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
-              transition={{ duration: 0.8, delay: 0.85, ease: [0.16, 1, 0.3, 1] }}
+              transition={{ duration: 0.8, delay: 0.95, ease: [0.16, 1, 0.3, 1] }}
               style={{ height: '3px', background: '#FF7B00', transformOrigin: 'left', marginBottom: '1.75rem', width: 'clamp(6rem, 15vw, 12rem)' }}
             />
 
-            {/* Tagline */}
             <motion.p
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              transition={{ duration: 0.7, delay: 0.9 }}
+              transition={{ duration: 0.7, delay: 1.0 }}
               style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem', fontWeight: 300, marginBottom: '2.5rem', letterSpacing: '0.02em' }}
             >
               Onde a velocidade encontra a natureza
             </motion.p>
 
-            {/* CTAs */}
             <motion.div
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 1.0 }}
+              transition={{ duration: 0.6, delay: 1.1 }}
               style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}
             >
               <Link to="/expedicoes" className="btn-primary">
@@ -236,7 +398,6 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Scroll cue — direita */}
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
           style={{ position: 'absolute', bottom: '2.5rem', right: '2.5rem', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
@@ -246,7 +407,10 @@ export default function Home() {
         </motion.div>
       </section>
 
-      {/* MANIFESTO */}
+      {/* ══ FAIXA DE PATROCINADORES ══ */}
+      <FaixaPatrocinadores />
+
+      {/* ══ MANIFESTO ══ */}
       <section style={{ background: '#fff', padding: 'clamp(7rem, 14vh, 12rem) 0', borderBottom: '1px solid #EBEBEB' }}>
         <div className="wrap">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(3rem, 6vw, 8rem)', alignItems: 'end' }}
@@ -292,7 +456,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* GALERIA */}
+      {/* ══ GALERIA ══ */}
       <section style={{ background: '#fff', paddingTop: 'clamp(5rem, 9vh, 8rem)' }}>
         <div className="wrap" style={{ marginBottom: '2.5rem' }}>
           <Reveal style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
@@ -311,7 +475,7 @@ export default function Home() {
         <Reveal delay={0.1}><Carousel /></Reveal>
       </section>
 
-      {/* PRÓXIMA EXPEDIÇÃO */}
+      {/* ══ PRÓXIMA EXPEDIÇÃO ══ */}
       <section style={{ background: '#F7F7F5', padding: 'clamp(6rem, 11vh, 10rem) 0', borderTop: '1px solid #EBEBEB' }}>
         <div className="wrap">
           <Reveal>
@@ -373,7 +537,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA FINAL */}
+      {/* ══ CTA FINAL ══ */}
       <section style={{ background: '#0A0A0A', position: 'relative', overflow: 'hidden', padding: 'clamp(7rem, 14vh, 12rem) 0', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', overflow: 'hidden' }}>
           <span className="display" style={{ fontSize: 'clamp(10rem, 28vw, 26rem)', color: 'rgba(255,255,255,0.018)', whiteSpace: 'nowrap', letterSpacing: '-0.04em' }}>JET</span>

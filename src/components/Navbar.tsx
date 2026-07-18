@@ -40,15 +40,17 @@ export default function Navbar() {
       >
         <div className="wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
-          {/* Logo */}
-          <Link to="/" style={{ flexShrink: 0 }}>
+          {/* Logo - Ajustada para ter presença e mudar de tamanho dinamicamente */}
+          <Link to="/" style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
             <img
               src="/images/Usina-Logo-Grande.png"
               alt="Usina do Jet"
               style={{
-                height: '2rem', width: 'auto', objectFit: 'contain',
-                filter: transparent ? 'brightness(0) invert(1)' : 'none',
-                transition: 'filter 0.35s',
+                height: scrolled ? '3rem' : '4.5rem', // Mágica aqui: Grande no topo, menor no scroll
+                width: 'auto', 
+                objectFit: 'contain',
+                filter: transparent ? 'brightness(0) invert(1)' : 'none', // Mantém o Preto/Branco funcionando
+                transition: 'all 0.35s ease',
               }}
             />
           </Link>
