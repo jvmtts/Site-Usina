@@ -1,11 +1,29 @@
-import { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence, useInView } from 'framer-motion'
-import { X, ArrowRight, MapPin, Clock, Users, Camera } from 'lucide-react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
+import { Link } from 'react-router-dom'
+import { AnimatePresence, motion, useInView, useReducedMotion } from 'framer-motion'
+import {
+  ArrowDown,
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Images,
+  MapPin,
+  Users,
+  X,
+} from 'lucide-react'
+import './Expeditions.css'
 
-/* ─── Types ──────────────────────────────────────────── */
-interface PastExpedition {
+interface Expedition {
   id: string
   destination: string
+  shortDestination: string
   state: string
   dateLabel: string
   duration: string
@@ -13,22 +31,51 @@ interface PastExpedition {
   description: string
   coverImage: string
   galleryImages: string[]
-  nextEditionMonth: string
-  nextEditionYear: string
 }
 
-/* ─── Data ───────────────────────────────────────────── */
-const PAST: PastExpedition[] = [
+interface HeroSlide {
+  image: string
+  expedition: string
+  location: string
+  year: string
+  position?: string
+}
+
+interface CountdownValue {
+  days: number
+  hours: number
+  minutes: number
+  ended: boolean
+}
+
+const HERO_AUTOPLAY_DURATION = 6_800
+
+const UPCOMING_EXPEDITION = {
+  destination: 'Campos do Jordão',
+  date: '21–23 de agosto de 2026',
+  countdownDate: '2026-08-21T08:00:00-03:00',
+  duration: '3 dias',
+  availability: '7 vagas',
+  price: 'R$ 3.800',
+  image: '/images/Expedi%C3%A7%C3%A3o4.jpeg',
+  detailsPath: '/expedicoes/campos-do-jordao-2026',
+  registrationPath: '/expedicoes/campos-do-jordao-2026/inscricao',
+}
+
+const EXPEDITIONS: Expedition[] = [
   {
     id: 'angra-paraty',
-    destination: 'Angra x Paraty',
+    destination: 'Angra dos Reis × Paraty',
+    shortDestination: 'Angra × Paraty',
     state: 'Rio de Janeiro',
     dateLabel: '2026',
     duration: '4 dias · 3 noites',
     spots: 14,
-    description: 'A primeira expedição da Usina do Jet. Navegamos entre as enseadas paradisíacas de Angra dos Reis e as águas históricas de Paraty.',
+    description:
+      'Enseadas, ilhas e a travessia até as águas históricas de Paraty em uma rota acompanhada de ponta a ponta.',
     coverImage: '/images/Angra/CAPA%20ANGRA.webp',
     galleryImages: [
+      '/images/Angra/CAPA%20ANGRA.webp',
       '/images/Angra/FOTO%202.webp',
       '/images/Angra/FOTO%203.webp',
       '/images/Angra/FOTO%204.webp',
@@ -37,41 +84,20 @@ const PAST: PastExpedition[] = [
       '/images/Angra/FOTO%207.webp',
       '/images/Angra/FOTO%208.webp',
     ],
-    nextEditionMonth: 'JAN',
-    nextEditionYear: '2027',
-  },
-  {
-    id: 'sao-sebastiao-ilhabela',
-    destination: 'São Sebastião x Ilhabela',
-    state: 'São Paulo',
-    dateLabel: '2026',
-    duration: '4 dias · 3 noites',
-    spots: 16,
-    description: 'O litoral norte paulista em toda sua beleza. Das praias abertas de São Sebastião às enseadas protegidas de Ilhabela.',
-    coverImage: '/images/São-Sebastião/SAO%20SEBAS%20X%20ILHABELA%20FOTOS%20SITE.webp',
-    galleryImages: [
-      '/images/São-Sebastião/FOTO%201.webp',
-      '/images/São-Sebastião/FOTO%202.webp',
-      '/images/São-Sebastião/FOTO%203.webp',
-      '/images/São-Sebastião/FOTO%204.webp',
-      '/images/São-Sebastião/FOTO%205.webp',
-      '/images/São-Sebastião/FOTO6.webp',
-      '/images/São-Sebastião/FOTO%207.webp',
-      '/images/São-Sebastião/FOTO%208.webp',
-    ],
-    nextEditionMonth: 'MAR',
-    nextEditionYear: '2027',
   },
   {
     id: 'capitolio-2025',
     destination: 'Capitólio',
+    shortDestination: 'Capitólio',
     state: 'Minas Gerais',
     dateLabel: 'Ago 2025',
     duration: '8 dias · 7 noites',
     spots: 20,
-    description: 'Os cânions esverdeados do Lago de Furnas em cima de um jet ski. Paredões de até 150 m de altura, águas cristalinas.',
+    description:
+      'Os cânions do Lago de Furnas vistos de perto, entre paredões, água verde e muitos quilômetros navegados.',
     coverImage: '/images/Capitolio/capa.webp',
     galleryImages: [
+      '/images/Capitolio/capa.webp',
       '/images/Capitolio/FOTO%201.webp',
       '/images/Capitolio/FOTO%202.webp',
       '/images/Capitolio/FOTO%203.webp',
@@ -81,550 +107,677 @@ const PAST: PastExpedition[] = [
       '/images/Capitolio/FOTO%207.webp',
       '/images/Capitolio/FOTO%208.webp',
     ],
-    nextEditionMonth: 'JUN',
-    nextEditionYear: '2027',
+  },
+  {
+    id: 'sao-sebastiao-ilhabela',
+    destination: 'São Sebastião × Ilhabela',
+    shortDestination: 'São Sebastião',
+    state: 'São Paulo',
+    dateLabel: '2026',
+    duration: '4 dias · 3 noites',
+    spots: 16,
+    description:
+      'Do mar aberto de São Sebastião às enseadas protegidas de Ilhabela, sempre com a equipe por perto.',
+    coverImage: '/images/S%C3%A3o-Sebasti%C3%A3o/SAO%20SEBAS%20X%20ILHABELA%20FOTOS%20SITE.webp',
+    galleryImages: [
+      '/images/S%C3%A3o-Sebasti%C3%A3o/SAO%20SEBAS%20X%20ILHABELA%20FOTOS%20SITE.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%203.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%201.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%202.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%204.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%205.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO6.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%207.webp',
+      '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%208.webp',
+    ],
   },
 ]
 
-/* ─── Countdown ──────────────────────────────────────── */
-function useCountdown(target: string) {
-  const calc = () => {
-    const diff = new Date(target).getTime() - Date.now()
-    if (diff <= 0) return { d: 0, h: 0, m: 0, s: 0, over: true }
-    return {
-      d: Math.floor(diff / 86_400_000),
-      h: Math.floor((diff % 86_400_000) / 3_600_000),
-      m: Math.floor((diff % 3_600_000) / 60_000),
-      s: Math.floor((diff % 60_000) / 1_000),
-      over: false,
-    }
+const HERO_SLIDES: HeroSlide[] = [
+  {
+    image: '/images/Angra/FOTO%202.webp',
+    expedition: 'Angra dos Reis × Paraty',
+    location: 'Rio de Janeiro',
+    year: '2026',
+    position: 'center 44%',
+  },
+  {
+    image: '/images/Capitolio/FOTO%201.webp',
+    expedition: 'Capitólio',
+    location: 'Minas Gerais',
+    year: 'Agosto de 2025',
+    position: 'center 48%',
+  },
+  {
+    image: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%203.webp',
+    expedition: 'São Sebastião × Ilhabela',
+    location: 'São Paulo',
+    year: '2026',
+    position: 'center 58%',
+  },
+  {
+    image: '/images/Angra/FOTO%204.webp',
+    expedition: 'Angra dos Reis × Paraty',
+    location: 'Rio de Janeiro',
+    year: '2026',
+    position: 'center 48%',
+  },
+  {
+    image: '/images/Capitolio/FOTO%203.webp',
+    expedition: 'Capitólio',
+    location: 'Minas Gerais',
+    year: 'Agosto de 2025',
+    position: 'center 48%',
+  },
+  {
+    image: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%201.webp',
+    expedition: 'São Sebastião × Ilhabela',
+    location: 'São Paulo',
+    year: '2026',
+    position: 'center 46%',
+  },
+]
+
+function getCountdown(target: string): CountdownValue {
+  const difference = new Date(target).getTime() - Date.now()
+
+  if (!Number.isFinite(difference) || difference <= 0) {
+    return { days: 0, hours: 0, minutes: 0, ended: true }
   }
-  const [t, setT] = useState(calc)
-  useEffect(() => {
-    const id = setInterval(() => setT(calc()), 1000)
-    return () => clearInterval(id)
-  }, [target])
-  return t
+
+  return {
+    days: Math.floor(difference / 86_400_000),
+    hours: Math.floor((difference % 86_400_000) / 3_600_000),
+    minutes: Math.floor((difference % 3_600_000) / 60_000),
+    ended: false,
+  }
 }
 
-function Countdown({ date }: { date: string }) {
-  const { d, h, m, s, over } = useCountdown(date)
-  if (over) return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', padding: '0.75rem 1.5rem', background: '#FF7B00' }}>
-      <span className="mono" style={{ fontSize: '0.82rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#fff', fontWeight: 700 }}>
-        Expedição em andamento
-      </span>
-    </div>
-  )
-  const units = [{ v: d, l: 'Dias' }, { v: h, l: 'Hrs' }, { v: m, l: 'Min' }, { v: s, l: 'Seg' }]
+function useCountdown(target: string) {
+  const [countdown, setCountdown] = useState(() => getCountdown(target))
+
+  useEffect(() => {
+    const update = () => setCountdown(getCountdown(target))
+    update()
+    const timer = window.setInterval(update, 30_000)
+    return () => window.clearInterval(timer)
+  }, [target])
+
+  return countdown
+}
+
+function Reveal({
+  children,
+  delay = 0,
+  className,
+}: {
+  children: ReactNode
+  delay?: number
+  className?: string
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const inView = useInView(ref, { once: true, margin: '-80px' })
+  const reduceMotion = useReducedMotion()
+
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.3rem', flexWrap: 'wrap' }}>
-      {units.map(({ v, l }, i) => (
-        <div key={l} style={{ display: 'flex', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ background: '#0A0A0A', padding: '0.65rem 0.75rem', minWidth: 'clamp(3.5rem, 6vw, 5.5rem)', textAlign: 'center' }}>
-              <span className="display" style={{ fontSize: 'clamp(2rem, 4vw, 3.5rem)', color: '#FF7B00', lineHeight: 1, display: 'block', fontVariantNumeric: 'tabular-nums' }}>
-                {String(v).padStart(2, '0')}
-              </span>
-            </div>
-            <span className="mono" style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#777', marginTop: '0.4rem', fontWeight: 700 }}>{l}</span>
+    <motion.div
+      ref={ref}
+      className={className}
+      initial={reduceMotion ? false : { opacity: 0, y: 30 }}
+      animate={inView ? { opacity: 1, y: 0 } : undefined}
+      transition={{
+        duration: reduceMotion ? 0 : 0.82,
+        delay: reduceMotion ? 0 : delay,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+function MaskedLine({ children, delay }: { children: ReactNode; delay: number }) {
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <span className="exp-hero-mask-line">
+      <motion.span
+        initial={reduceMotion ? false : { y: '112%' }}
+        animate={{ y: 0 }}
+        transition={{
+          duration: reduceMotion ? 0 : 0.92,
+          delay: reduceMotion ? 0 : delay,
+          ease: [0.16, 1, 0.3, 1],
+        }}
+      >
+        {children}
+      </motion.span>
+    </span>
+  )
+}
+
+function ExpeditionHero() {
+  const [activeIndex, setActiveIndex] = useState(0)
+  const touchStartX = useRef<number | null>(null)
+  const reduceMotion = useReducedMotion()
+  const activeSlide = HERO_SLIDES[activeIndex]
+
+  const navigate = useCallback((direction: number) => {
+    setActiveIndex((current) => (current + direction + HERO_SLIDES.length) % HERO_SLIDES.length)
+  }, [])
+
+  useEffect(() => {
+    if (reduceMotion) return
+
+    const timer = window.setTimeout(() => navigate(1), HERO_AUTOPLAY_DURATION)
+    return () => window.clearTimeout(timer)
+  }, [activeIndex, navigate, reduceMotion])
+
+  useEffect(() => {
+    const nextSlide = HERO_SLIDES[(activeIndex + 1) % HERO_SLIDES.length]
+    const preload = new Image()
+    preload.src = nextSlide.image
+  }, [activeIndex])
+
+  return (
+    <section
+      className="exp-hero"
+      aria-labelledby="expeditions-heading"
+      onTouchStart={(event) => {
+        touchStartX.current = event.touches[0]?.clientX ?? null
+      }}
+      onTouchEnd={(event) => {
+        if (touchStartX.current === null) return
+        const difference = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current
+        touchStartX.current = null
+        if (Math.abs(difference) > 55) navigate(difference > 0 ? -1 : 1)
+      }}
+    >
+      <div className="exp-hero-media" aria-live="off">
+        <AnimatePresence initial={false} mode="sync">
+          <motion.img
+            key={activeSlide.image}
+            src={activeSlide.image}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            fetchPriority={activeIndex === 0 ? 'high' : 'auto'}
+            style={{ objectPosition: activeSlide.position ?? 'center' }}
+            initial={reduceMotion ? false : { opacity: 0, scale: 1.055 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={reduceMotion ? undefined : { opacity: 0 }}
+            transition={{
+              opacity: { duration: reduceMotion ? 0 : 1.15, ease: 'easeOut' },
+              scale: { duration: reduceMotion ? 0 : HERO_AUTOPLAY_DURATION / 1_000 + 0.8, ease: 'linear' },
+            }}
+          />
+        </AnimatePresence>
+      </div>
+
+      <div className="exp-hero-shade" aria-hidden="true" />
+      <motion.div
+        className="exp-hero-opening-mask"
+        aria-hidden="true"
+        initial={reduceMotion ? false : { scaleX: 1 }}
+        animate={{ scaleX: 0 }}
+        transition={{ duration: reduceMotion ? 0 : 1.08, delay: 0.08, ease: [0.76, 0, 0.24, 1] }}
+      />
+
+      <div className="wrap exp-hero-content">
+        <motion.span
+          className="mono exp-hero-kicker"
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.6, delay: reduceMotion ? 0 : 0.72 }}
+        >
+          Rotas pelo Brasil · Desde 2018
+        </motion.span>
+
+        <h1 id="expeditions-heading" className="display exp-hero-title">
+          <MaskedLine delay={0.48}>Conheça nossas</MaskedLine>
+          <MaskedLine delay={0.6}>expedições.</MaskedLine>
+        </h1>
+
+        <motion.p
+          className="exp-hero-description"
+          initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.7, delay: reduceMotion ? 0 : 0.92 }}
+        >
+          Travessias acompanhadas por paisagens que só a água consegue revelar.
+        </motion.p>
+      </div>
+
+      <div className="wrap exp-hero-footer">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={`${activeSlide.expedition}-${activeIndex}`}
+            className="exp-hero-caption"
+            initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+            transition={{ duration: reduceMotion ? 0 : 0.34 }}
+          >
+            <span className="mono">Fotografia {String(activeIndex + 1).padStart(2, '0')}</span>
+            <strong>{activeSlide.expedition}</strong>
+            <small>{activeSlide.location} · {activeSlide.year}</small>
+          </motion.div>
+        </AnimatePresence>
+
+        <div className="exp-hero-controls">
+          <span className="mono exp-hero-counter">
+            {String(activeIndex + 1).padStart(2, '0')} / {String(HERO_SLIDES.length).padStart(2, '0')}
+          </span>
+          <button type="button" onClick={() => navigate(-1)} aria-label="Fotografia anterior">
+            <ChevronLeft size={21} aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => navigate(1)} aria-label="Próxima fotografia">
+            <ChevronRight size={21} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+
+      <div className="exp-hero-progress" aria-hidden="true">
+        <span
+          key={activeIndex}
+          style={{
+            animationDuration: reduceMotion ? '0ms' : `${HERO_AUTOPLAY_DURATION}ms`,
+          }}
+        />
+      </div>
+
+      <a className="exp-hero-scroll" href="#historias">
+        <span className="mono">Descobrir as rotas</span>
+        <ArrowDown size={17} aria-hidden="true" />
+      </a>
+    </section>
+  )
+}
+
+function ExpeditionChapter({
+  expedition,
+  onOpen,
+}: {
+  expedition: Expedition
+  onOpen: (expedition: Expedition) => void
+}) {
+  const mediaRef = useRef<HTMLDivElement>(null)
+  const inView = useInView(mediaRef, { once: true, margin: '-12% 0px' })
+  const reduceMotion = useReducedMotion()
+
+  return (
+    <article className="exp-chapter" aria-label={`Expedição ${expedition.destination}`}>
+      <motion.div
+        ref={mediaRef}
+        className="exp-chapter-media"
+        initial={reduceMotion ? false : { clipPath: 'inset(0 0 100% 0)' }}
+        animate={inView ? { clipPath: 'inset(0 0 0% 0)' } : undefined}
+        transition={{ duration: reduceMotion ? 0 : 1.05, ease: [0.76, 0, 0.24, 1] }}
+      >
+        <button
+          type="button"
+          onClick={() => onOpen(expedition)}
+          aria-label={`Conhecer a expedição ${expedition.destination}`}
+        >
+          <motion.img
+            src={expedition.coverImage}
+            alt={`Participantes da expedição ${expedition.destination}`}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+          />
+          <span className="exp-chapter-media-action">
+            <Images size={18} aria-hidden="true" />
+            Abrir história
+          </span>
+        </button>
+      </motion.div>
+    </article>
+  )
+}
+
+function ExpeditionStories({ onOpen }: { onOpen: (expedition: Expedition) => void }) {
+  return (
+    <section id="historias" className="exp-stories" aria-labelledby="stories-heading">
+      <div className="wrap">
+        <Reveal className="exp-stories-heading">
+          <div>
+            <span className="mono exp-kicker">Expedições realizadas</span>
+            <h2 id="stories-heading" className="display">Cada destino deixou uma história.</h2>
           </div>
-          {i < units.length - 1 && (
-            <span className="display" style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', color: '#DDD', lineHeight: 1, padding: '0.5rem 0.15rem' }}>:</span>
-          )}
+          <p>
+            Três trajetos, diferentes paisagens e o mesmo cuidado em cada quilômetro.
+            Abra uma rota para ver o relato e as fotografias da viagem.
+          </p>
+        </Reveal>
+
+        <div className="exp-chapters">
+          {EXPEDITIONS.map((expedition) => (
+            <ExpeditionChapter
+              key={expedition.id}
+              expedition={expedition}
+              onOpen={onOpen}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function AnimatedNumber({ value }: { value: number }) {
+  const reduceMotion = useReducedMotion()
+  const formattedValue = String(value).padStart(2, '0')
+
+  return (
+    <span className="exp-countdown-value" aria-label={String(value)}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={formattedValue}
+          aria-hidden="true"
+          initial={reduceMotion ? false : { y: '55%', opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={reduceMotion ? undefined : { y: '-55%', opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {formattedValue}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  )
+}
+
+function Countdown({ target }: { target: string }) {
+  const countdown = useCountdown(target)
+
+  if (countdown.ended) {
+    return <p className="exp-countdown-ended">Consulte a próxima data com nossa equipe.</p>
+  }
+
+  const units = [
+    { label: 'Dias', value: countdown.days },
+    { label: 'Horas', value: countdown.hours },
+    { label: 'Minutos', value: countdown.minutes },
+  ]
+
+  return (
+    <div className="exp-countdown" aria-label="Contagem regressiva para a expedição">
+      {units.map((unit) => (
+        <div className="exp-countdown-unit" key={unit.label}>
+          <AnimatedNumber value={unit.value} />
+          <span className="mono exp-countdown-label">{unit.label}</span>
         </div>
       ))}
     </div>
   )
 }
 
-/* ─── Reveal ─────────────────────────────────────────── */
-function Reveal({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const ref    = useRef(null)
-  const inView = useInView(ref, { once: true, margin: '-60px' })
+function UpcomingExpedition() {
+  const facts = [
+    { icon: MapPin, label: 'Destino', value: `${UPCOMING_EXPEDITION.destination}, SP` },
+    { icon: Clock3, label: 'Duração', value: UPCOMING_EXPEDITION.duration },
+    { icon: Users, label: 'Disponibilidade', value: UPCOMING_EXPEDITION.availability },
+  ]
+
   return (
-    <motion.div ref={ref} className={className}
-      initial={{ opacity: 0, y: 28 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}>
-      {children}
-    </motion.div>
+    <section className="exp-upcoming" aria-labelledby="upcoming-heading">
+      <div className="wrap">
+        <Reveal className="exp-upcoming-heading">
+          <div>
+            <span className="mono exp-kicker">Próxima partida</span>
+            <h2 id="upcoming-heading" className="display">A próxima história já tem destino.</h2>
+          </div>
+          <p>
+            Campos do Jordão ganha sua própria experiência. Veja o essencial por aqui ou
+            abra a página da expedição para conhecer o roteiro completo.
+          </p>
+        </Reveal>
+
+        <Reveal className="exp-upcoming-card" delay={0.08}>
+          <div className="exp-upcoming-media">
+            <img
+              src={UPCOMING_EXPEDITION.image}
+              alt="Campos do Jordão, próxima expedição da Usina do Jet"
+              loading="lazy"
+              decoding="async"
+            />
+            <span className="mono exp-upcoming-status"><i aria-hidden="true" />Vagas abertas</span>
+            <div className="exp-upcoming-media-caption">
+              <span className="mono">Serra da Mantiqueira · São Paulo</span>
+              <h3 className="display">Campos do Jordão</h3>
+            </div>
+          </div>
+
+          <div className="exp-upcoming-content">
+            <div className="exp-upcoming-date">
+              <span className="mono">{UPCOMING_EXPEDITION.date}</span>
+              <strong>A expedição começa em</strong>
+            </div>
+
+            <Countdown target={UPCOMING_EXPEDITION.countdownDate} />
+
+            <dl className="exp-upcoming-facts">
+              {facts.map(({ icon: Icon, label, value }) => (
+                <div key={label}>
+                  <dt><Icon size={16} strokeWidth={1.8} aria-hidden="true" /><span className="mono">{label}</span></dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+              <div className="exp-upcoming-price">
+                <dt className="mono">Investimento</dt>
+                <dd>{UPCOMING_EXPEDITION.price}</dd>
+                <small>por pessoa</small>
+              </div>
+            </dl>
+
+            <div className="exp-upcoming-actions">
+              <Link className="exp-button exp-button-dark" to={UPCOMING_EXPEDITION.detailsPath}>
+                Conhecer o roteiro <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+              <Link className="exp-text-link" to={UPCOMING_EXPEDITION.registrationPath}>
+                Ir direto para a inscrição <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
   )
 }
 
-/* ─── Gallery Modal ──────────────────────────────────── */
-function GalleryModal({ exp, onClose }: { exp: PastExpedition; onClose: () => void }) {
+function FutureRoute() {
+  return (
+    <section className="exp-future" aria-labelledby="future-route-heading">
+      <div className="wrap">
+        <Reveal className="exp-future-card">
+          <div className="exp-future-copy">
+            <span className="mono exp-kicker exp-kicker-light">No mapa da Usina</span>
+            <h2 id="future-route-heading" className="display">Florianópolis</h2>
+            <p>
+              Uma nova rota está sendo desenhada. Quando os detalhes estiverem fechados,
+              você pode ser uma das primeiras pessoas a saber.
+            </p>
+            <Link className="exp-button exp-button-light" to="/contato">
+              Quero receber novidades <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+          </div>
+          <div className="exp-future-date" aria-label="Previsão para outubro de 2026">
+            <span className="mono">Previsão</span>
+            <strong className="display">OUT</strong>
+            <strong className="display">2026</strong>
+            <small className="mono">Data a confirmar</small>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  )
+}
+
+function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onClose: () => void }) {
+  const [imageIndex, setImageIndex] = useState(0)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const reduceMotion = useReducedMotion()
+  const images = expedition.galleryImages
+
+  const navigate = useCallback((direction: number) => {
+    setImageIndex((current) => (current + direction + images.length) % images.length)
+  }, [images.length])
+
   useEffect(() => {
+    const neighbors = [
+      images[(imageIndex + 1) % images.length],
+      images[(imageIndex - 1 + images.length) % images.length],
+    ]
+    neighbors.forEach((src) => {
+      const preload = new Image()
+      preload.src = src
+    })
+  }, [imageIndex, images])
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    const previouslyFocused = document.activeElement as HTMLElement | null
     document.body.style.overflow = 'hidden'
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', esc)
-    return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', esc) }
-  }, [onClose])
+    closeButtonRef.current?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key === 'ArrowLeft') navigate(-1)
+      if (event.key === 'ArrowRight') navigate(1)
+
+      if (event.key === 'Tab' && dialogRef.current) {
+        const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ))
+        if (focusable.length === 0) {
+          event.preventDefault()
+          return
+        }
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault()
+          last.focus()
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault()
+          first.focus()
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+      previouslyFocused?.focus()
+    }
+  }, [navigate, onClose])
 
   return (
     <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 }} onClick={onClose}
-      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0' }}>
+      ref={dialogRef}
+      className="exp-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="exp-dialog-title"
+      initial={reduceMotion ? false : { clipPath: 'inset(0 0 0 100%)' }}
+      animate={{ clipPath: 'inset(0 0 0 0%)' }}
+      exit={reduceMotion ? undefined : { clipPath: 'inset(0 100% 0 0)' }}
+      transition={{ duration: reduceMotion ? 0 : 0.76, ease: [0.76, 0, 0.24, 1] }}
+    >
+      <motion.aside
+        className="exp-dialog-copy"
+        initial={reduceMotion ? false : { opacity: 0, y: 22 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reduceMotion ? 0 : 0.58, delay: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <button ref={closeButtonRef} type="button" className="exp-dialog-close" onClick={onClose} aria-label="Fechar expedição">
+          <X size={21} aria-hidden="true" />
+        </button>
+        <span className="mono exp-kicker exp-kicker-light">Diário de bordo · {expedition.dateLabel}</span>
+        <h2 id="exp-dialog-title" className="display">{expedition.destination}</h2>
+        <p>{expedition.description}</p>
+        <dl>
+          <div><dt className="mono">Destino</dt><dd>{expedition.state}</dd></div>
+          <div><dt className="mono">Duração</dt><dd>{expedition.duration}</dd></div>
+          <div><dt className="mono">Grupo</dt><dd>{expedition.spots} participantes</dd></div>
+        </dl>
+        <div className="exp-dialog-count">
+          <span className="mono">Fotografia</span>
+          <strong>{String(imageIndex + 1).padStart(2, '0')}</strong>
+          <small>/ {String(images.length).padStart(2, '0')}</small>
+        </div>
+      </motion.aside>
+
       <motion.div
-        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-        transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-        onClick={e => e.stopPropagation()}
-        style={{ background: '#fff', width: '100%', maxWidth: '960px', maxHeight: '92vh', overflowY: 'auto', boxShadow: '0 -20px 80px rgba(0,0,0,0.4)' }}>
-
-        {/* Hero — imagem de capa com título sobreposto */}
-        <div style={{ position: 'relative', width: '100%', aspectRatio: '16/7', overflow: 'hidden', background: '#0A0A0A' }}>
-          <img src={exp.coverImage} alt={exp.destination}
-               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.15) 100%)' }} />
-          <div style={{ position: 'absolute', top: '3px', left: 0, right: 0, height: '3px', background: '#FF7B00' }} />
-
-          {/* Botão fechar flutuante */}
-          <button onClick={onClose}
-            style={{
-              position: 'absolute', top: '1.25rem', right: '1.25rem',
-              width: '2.75rem', height: '2.75rem', borderRadius: '50%',
-              background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255,255,255,0.25)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', transition: 'background 0.25s ease, transform 0.25s ease',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#FF7B00'; e.currentTarget.style.transform = 'rotate(90deg)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.35)'; e.currentTarget.style.transform = 'rotate(0deg)' }}>
-            <X size={17} />
+        className="exp-dialog-gallery"
+        initial={reduceMotion ? false : { opacity: 0, scale: 1.025 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: reduceMotion ? 0 : 0.72, delay: reduceMotion ? 0 : 0.18, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <div className="exp-dialog-stage">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.img
+              key={images[imageIndex]}
+              src={images[imageIndex]}
+              alt={`${expedition.destination}, fotografia ${imageIndex + 1} de ${images.length}`}
+              draggable={false}
+              drag={reduceMotion ? false : 'x'}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.16}
+              onDragEnd={(_, info) => {
+                if (Math.abs(info.offset.x) > 90 || Math.abs(info.velocity.x) > 650) {
+                  navigate(info.offset.x > 0 ? -1 : 1)
+                }
+              }}
+              initial={reduceMotion ? false : { opacity: 0, scale: 1.015 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, scale: 0.99 }}
+              transition={{ duration: reduceMotion ? 0 : 0.38, ease: [0.16, 1, 0.3, 1] }}
+            />
+          </AnimatePresence>
+          <button type="button" className="exp-dialog-arrow is-left" onClick={() => navigate(-1)} aria-label="Fotografia anterior">
+            <ChevronLeft size={24} aria-hidden="true" />
           </button>
-
-          {/* Título sobreposto */}
-          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 'clamp(1.5rem,3vw,2.5rem)' }}>
-            <span className="mono" style={{ fontSize: '0.72rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#FF7B00', display: 'block', marginBottom: '0.4rem', fontWeight: 700, textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
-              {exp.state} · {exp.dateLabel}
-            </span>
-            <h2 className="display" style={{ fontSize: 'clamp(2rem, 5vw, 3.6rem)', color: '#fff', lineHeight: 0.95, textShadow: '0 4px 24px rgba(0,0,0,0.5)' }}>
-              {exp.destination.toUpperCase()}
-            </h2>
-          </div>
+          <button type="button" className="exp-dialog-arrow is-right" onClick={() => navigate(1)} aria-label="Próxima fotografia">
+            <ChevronRight size={24} aria-hidden="true" />
+          </button>
         </div>
 
-        {/* Descrição + stats */}
-        <div style={{ padding: 'clamp(1.5rem,3vw,2.5rem)', borderBottom: '1px solid #EBEBEB', display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <p style={{ color: '#555', fontSize: '1rem', fontWeight: 300, lineHeight: 1.8, maxWidth: '560px', flex: '1 1 320px' }}>
-            {exp.description}
-          </p>
-          <div style={{ display: 'flex', gap: '1.75rem', flexShrink: 0 }}>
-            {[
-              { icon: <Clock size={15} />, label: 'Duração', text: exp.duration },
-              { icon: <Users size={15} />, label: 'Grupo', text: `${exp.spots} pessoas` },
-            ].map(({ icon, label, text }) => (
-              <div key={label} style={{ borderLeft: '2px solid #FF7B00', paddingLeft: '0.85rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#FF7B00', marginBottom: '0.25rem' }}>
-                  {icon}
-                  <span className="mono" style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700 }}>{label}</span>
-                </div>
-                <span style={{ color: '#0A0A0A', fontSize: '0.9rem', fontWeight: 600 }}>{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Galeria — bento grid */}
-        <div style={{ padding: 'clamp(1.5rem,3vw,2.5rem)' }}>
-          <p className="mono" style={{ fontSize: '0.75rem', letterSpacing: '0.16em', textTransform: 'uppercase', color: '#666', marginBottom: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Camera size={14} /> Galeria
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridAutoRows: 'clamp(120px,16vw,180px)', gridAutoFlow: 'dense', gap: '0.6rem' }}>
-            {exp.galleryImages.map((src, i) => (
-              <div key={i}
-                   style={{
-                     position: 'relative',
-                     overflow: 'hidden',
-                     background: '#F0F0F0',
-                     gridColumn: i === 0 ? 'span 2' : 'span 1',
-                     gridRow: i === 0 ? 'span 2' : 'span 1',
-                     cursor: 'pointer',
-                   }}
-                   onMouseEnter={e => {
-                     const img = e.currentTarget.querySelector('img') as HTMLImageElement
-                     if (img) img.style.transform = 'scale(1.08)'
-                     const ov = e.currentTarget.querySelector('.gal-overlay') as HTMLElement
-                     if (ov) ov.style.opacity = '1'
-                   }}
-                   onMouseLeave={e => {
-                     const img = e.currentTarget.querySelector('img') as HTMLImageElement
-                     if (img) img.style.transform = 'scale(1)'
-                     const ov = e.currentTarget.querySelector('.gal-overlay') as HTMLElement
-                     if (ov) ov.style.opacity = '0'
-                   }}>
-                <img src={src} alt={`${exp.destination} ${i + 1}`}
-                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.6s ease' }} />
-                <div className="gal-overlay" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 45%)', opacity: 0, transition: 'opacity 0.3s ease' }} />
-              </div>
-            ))}
-          </div>
+        <div className="exp-dialog-thumbnails" aria-label="Selecionar fotografia">
+          {images.map((image, index) => (
+            <button
+              key={image}
+              type="button"
+              className={index === imageIndex ? 'is-active' : undefined}
+              onClick={() => setImageIndex(index)}
+              aria-label={`Abrir fotografia ${index + 1}`}
+              aria-pressed={index === imageIndex}
+            >
+              <img src={image} alt="" loading="lazy" draggable={false} />
+            </button>
+          ))}
         </div>
       </motion.div>
     </motion.div>
   )
 }
 
-/* ─── Main Page ──────────────────────────────────────── */
 export default function Expeditions() {
-  const [galleryExp, setGalleryExp] = useState<PastExpedition | null>(null)
+  const [selectedExpedition, setSelectedExpedition] = useState<Expedition | null>(null)
 
   return (
-    <main style={{ background: '#fff', minHeight: '100vh' }}>
+    <main className="expeditions-page">
+      <ExpeditionHero />
 
-      {/* ── PAGE HEADER ── */}
-      <section style={{ background: '#0A0A0A', position: 'relative', overflow: 'hidden', paddingTop: 'clamp(8rem,16vh,12rem)', paddingBottom: 'clamp(4rem,8vh,6rem)' }}>
-        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', overflow: 'hidden' }}>
-          <span className="display" style={{ fontSize: 'clamp(8rem,18vw,16rem)', color: 'rgba(255,255,255,0.025)', letterSpacing: '-0.04em', whiteSpace: 'nowrap' }}>
-            EXPEDIÇÕES
-          </span>
-        </div>
-        <div className="wrap" style={{ position: 'relative', zIndex: 1 }}>
-          <motion.span className="eyebrow"
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            style={{ marginBottom: '1.25rem' }}>
-            Calendário de expedições
-          </motion.span>
-          <motion.h1 className="display"
-            initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            style={{ fontSize: 'clamp(3.5rem, 9vw, 8rem)', color: '#fff', lineHeight: 0.9 }}>
-            EXPEDIÇÕES
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.45 }}
-            style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.05rem', fontWeight: 300, lineHeight: 1.75, maxWidth: '480px', marginTop: '1.75rem' }}>
-            4 expedições realizadas desde 2022. A próxima já tem data — garanta a sua vaga.
-          </motion.p>
-        </div>
-      </section>
+      <ExpeditionStories onOpen={setSelectedExpedition} />
+      <UpcomingExpedition />
+      <FutureRoute />
 
-      {/* ── PRÓXIMA EXPEDIÇÃO — Campos do Jordão ── */}
-      <section className="wrap" style={{ paddingTop: 'clamp(4rem,8vh,6rem)', paddingBottom: 'clamp(3rem,5vh,4rem)' }}>
-        <Reveal>
-          <span className="eyebrow" style={{ marginBottom: '0.75rem' }}>Próxima expedição</span>
-          <h2 className="display" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)', color: '#0A0A0A', marginBottom: '2rem' }}>
-            CAMPOS DO JORDÃO — SÃO PAULO
-          </h2>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <div style={{ border: '1px solid #EBEBEB', overflow: 'hidden' }}>
-            {/* Imagem + Overlay de Meta Info */}
-            <div style={{ position: 'relative', overflow: 'hidden', minHeight: '380px' }}
-              onMouseEnter={e => { const img = e.currentTarget.querySelector('img') as HTMLImageElement; if (img) img.style.transform = 'scale(1.03)' }}
-              onMouseLeave={e => { const img = e.currentTarget.querySelector('img') as HTMLImageElement; if (img) img.style.transform = 'scale(1)' }}>
-              <img src="/images/Expedição4.jpeg" alt="Campos do Jordão"
-                   style={{ width: '100%', aspectRatio: '21/8', minHeight: '380px', objectFit: 'cover', display: 'block', transition: 'transform 0.9s ease' }} />
-
-              {/* Gradientes combinados para garantir a leitura no topo e na base */}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 50%)' }} />
-
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 'clamp(1.5rem,3vw,3rem)' }}>
-                {/* Header (Badge + Título) */}
-                <div>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.9rem', background: '#FF7B00', marginBottom: '1rem' }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff', animation: 'pulse-dot 1.5s ease-in-out infinite' }} />
-                    <span className="mono" style={{ fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#fff', fontWeight: 700 }}>Vagas abertas</span>
-                  </div>
-                  <h3 className="display" style={{ fontSize: 'clamp(2rem,5vw,4.5rem)', color: '#fff', lineHeight: 0.9, marginBottom: '0.4rem' }}>CAMPOS DO JORDÃO</h3>
-                  <p className="mono" style={{ fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', fontWeight: 700 }}>
-                    Serra da Mantiqueira · 21–28 Ago 2026
-                  </p>
-                </div>
-
-                {/* Informações da Expedição */}
-                <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', marginTop: '2rem' }}>
-                  {[
-                    { icon: <MapPin size={14} />, label: 'Destino',    value: 'Campos do Jordão, SP' },
-                    { icon: <Clock size={14} />,  label: 'Período',    value: '21 – 28 Ago 2026' },
-                    { icon: <Clock size={14} />,  label: 'Duração',    value: '8 dias · 7 noites' },
-                    { icon: <Users size={14} />,  label: 'Vagas',      value: '7 de 20 restantes' },
-                  ].map(({ icon, label, value }) => (
-                    <div key={label}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', marginBottom: '0.3rem' }}>
-                        <span style={{ color: '#FF7B00' }}>{icon}</span>
-                        <span className="mono" style={{ fontSize: '0.68rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>{label}</span>
-                      </div>
-                      <p style={{ color: '#fff', fontSize: '0.95rem', fontWeight: 600 }}>{value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Info inferior branca (Contador, Botão e Preço lado a lado) */}
-            <div style={{ background: '#fff', padding: 'clamp(1.5rem,3vw,2.5rem)' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'space-between', alignItems: 'center' }}>
-
-                {/* Countdown (Esquerda) */}
-                <div style={{ flex: '1 1 auto' }}>
-                  <p className="mono" style={{ fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#777', marginBottom: '1rem', fontWeight: 700 }}>
-                    A expedição começa em
-                  </p>
-                  <Countdown date="2026-08-21T08:00:00" />
-                </div>
-
-                {/* Botão WhatsApp (Centro) */}
-                <div style={{ flex: '1 1 auto', display: 'flex', justifyContent: 'center' }}>
-                  <a href="https://wa.me/5511999999999?text=Quero+garantir+minha+vaga+em+Campos+do+Jord%C3%A3o"
-                     target="_blank" rel="noopener noreferrer" className="btn-primary"
-                     style={{ padding: '1.2rem 3rem', fontSize: '0.8rem' }}>
-                    Garantir vaga via WhatsApp
-                  </a>
-                </div>
-
-                {/* Preço (Direita) */}
-                <div style={{ flex: '1 1 auto', textAlign: 'right' }}>
-                  <p className="mono" style={{ fontSize: '0.68rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#999', marginBottom: '0.3rem', fontWeight: 700 }}>Investimento</p>
-                  <p className="display" style={{ fontSize: 'clamp(2rem,3vw,2.8rem)', color: '#0A0A0A', lineHeight: 1 }}>R$ 3.800</p>
-                  <p className="mono" style={{ fontSize: '0.68rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#999', marginTop: '0.25rem', fontWeight: 700 }}>por pessoa</p>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ── EM BREVE — Florianópolis ── */}
-      <section className="wrap" style={{ paddingBottom: 'clamp(5rem,10vh,8rem)' }}>
-        <Reveal>
-          <span className="eyebrow" style={{ marginBottom: '0.75rem' }}>Em breve</span>
-          <h2 className="display" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)', color: '#0A0A0A', marginBottom: '2rem' }}>
-            PRÓXIMAS EXPEDIÇÕES
-          </h2>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          {/* Card Florianópolis — sem clique, só teaser */}
-          <div style={{ position: 'relative', overflow: 'hidden', background: '#0A0A0A', border: '1px solid #EBEBEB', aspectRatio: '21/7' }}>
-            {/* Fundo com gradiente premium */}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 50%, #0A0A0A 100%)' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 70% 50%, rgba(255,123,0,0.08) 0%, transparent 60%)' }} />
-
-            {/* Conteúdo */}
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', padding: 'clamp(2rem,4vw,4rem)', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.9rem', border: '1px solid rgba(255,255,255,0.15)', marginBottom: '1.25rem' }}>
-                  <span className="mono" style={{ fontSize: '0.72rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>
-                    Em breve · Data a confirmar
-                  </span>
-                </div>
-                <h3 className="display" style={{ fontSize: 'clamp(2.5rem,6vw,5.5rem)', color: '#fff', lineHeight: 0.88, marginBottom: '0.5rem' }}>
-                  FLORIANÓPOLIS
-                </h3>
-                <p className="mono" style={{ fontSize: '0.78rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
-                  Santa Catarina · Outubro 2026
-                </p>
-              </div>
-
-              {/* Lado direito — destaque da data */}
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p className="mono" style={{ fontSize: '0.68rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: '0.5rem', fontWeight: 700 }}>
-                  Previsão
-                </p>
-                <p className="display" style={{ fontSize: 'clamp(3rem,6vw,5rem)', color: '#FF7B00', lineHeight: 1 }}>
-                  OUT
-                </p>
-                <p className="display" style={{ fontSize: 'clamp(3rem,6vw,5rem)', color: '#FF7B00', lineHeight: 1 }}>
-                  2026
-                </p>
-                <p className="mono" style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)', marginTop: '0.5rem', fontWeight: 700 }}>
-                  data a confirmar
-                </p>
-              </div>
-            </div>
-
-            {/* Linha decorativa laranja no fundo */}
-            <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(to right, #FF7B00, transparent)' }} />
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ── EXPEDIÇÕES REALIZADAS (faixas horizontais, estilo Florianópolis) ── */}
-      <section style={{ borderTop: '1px solid #EBEBEB', background: '#F7F7F5', paddingTop: 'clamp(4rem,8vh,6rem)', paddingBottom: 'clamp(6rem,12vh,10rem)' }}>
-        <div className="wrap">
-          <Reveal>
-            <span className="eyebrow-dark" style={{ marginBottom: '0.75rem' }}>Arquivo</span>
-            <h2 className="display" style={{ fontSize: 'clamp(2rem,4.5vw,3.5rem)', color: '#0A0A0A', marginBottom: 'clamp(2.5rem,5vh,3.5rem)' }}>
-              EXPEDIÇÕES REALIZADAS
-            </h2>
-          </Reveal>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {PAST.map((exp, i) => (
-              <Reveal key={exp.id} delay={i * 0.08}>
-                <div
-                  className="past-exp-card"
-                  onClick={() => setGalleryExp(exp)}
-                  style={{
-                    position: 'relative',
-                    overflow: 'hidden',
-                    background: '#0A0A0A',
-                    border: '1px solid #EBEBEB',
-                    aspectRatio: '21/7',
-                    cursor: 'pointer',
-                    transition: 'border-color 0.4s ease, box-shadow 0.4s ease',
-                  }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget
-                    el.style.borderColor = '#FF7B00'
-                    el.style.boxShadow = '0 20px 60px rgba(0,0,0,0.25)'
-                    const img = el.querySelector('.banner-bg') as HTMLImageElement
-                    if (img) img.style.transform = 'scale(1.08)'
-                    const overlay = el.querySelector('.banner-overlay') as HTMLElement
-                    if (overlay) overlay.style.opacity = '0.55'
-                    const content = el.querySelector('.banner-content') as HTMLElement
-                    if (content) content.style.transform = 'translateY(-4px)'
-                    const btn = el.querySelector('.gallery-btn') as HTMLElement
-                    if (btn) {
-                      btn.style.background = '#FF7B00'
-                      btn.style.borderColor = '#FF7B00'
-                      btn.style.color = '#fff'
-                      btn.style.paddingRight = '1.4rem'
-                    }
-                    const arrow = el.querySelector('.gallery-arrow') as HTMLElement
-                    if (arrow) arrow.style.transform = 'translateX(3px)'
-                    const line = el.querySelector('.accent-line') as HTMLElement
-                    if (line) line.style.width = '100%'
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget
-                    el.style.borderColor = '#EBEBEB'
-                    el.style.boxShadow = 'none'
-                    const img = el.querySelector('.banner-bg') as HTMLImageElement
-                    if (img) img.style.transform = 'scale(1)'
-                    const overlay = el.querySelector('.banner-overlay') as HTMLElement
-                    if (overlay) overlay.style.opacity = '1'
-                    const content = el.querySelector('.banner-content') as HTMLElement
-                    if (content) content.style.transform = 'translateY(0)'
-                    const btn = el.querySelector('.gallery-btn') as HTMLElement
-                    if (btn) {
-                      btn.style.background = 'transparent'
-                      btn.style.borderColor = 'rgba(255,255,255,0.4)'
-                      btn.style.color = '#fff'
-                      btn.style.paddingRight = '1.75rem'
-                    }
-                    const arrow = el.querySelector('.gallery-arrow') as HTMLElement
-                    if (arrow) arrow.style.transform = 'translateX(0)'
-                    const line = el.querySelector('.accent-line') as HTMLElement
-                    if (line) line.style.width = '0%'
-                  }}
-                >
-                  {/* Imagem de fundo */}
-                  <img
-                    src={exp.coverImage}
-                    alt={exp.destination}
-                    className="banner-bg"
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      transition: 'transform 0.8s ease',
-                    }}
-                  />
-
-                  {/* Overlay escuro (transição suave no hover) */}
-                  <div
-                    className="banner-overlay"
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      background: 'linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.25) 75%, rgba(0,0,0,0.15) 100%)',
-                      opacity: 1,
-                      transition: 'opacity 0.5s ease',
-                    }}
-                  />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 45%)' }} />
-                  {/* Vinheta extra atrás da data (direita), garante legibilidade do laranja */}
-                  <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 90% 40%, rgba(0,0,0,0.5) 0%, transparent 55%)' }} />
-
-                  {/* Número de índice — detalhe editorial */}
-                  <span className="mono" style={{ position: 'absolute', top: 'clamp(1.25rem,2.5vw,1.75rem)', right: 'clamp(1.25rem,2.5vw,1.75rem)', fontSize: '0.75rem', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.45)', textShadow: '0 2px 8px rgba(0,0,0,0.8)', zIndex: 1, fontWeight: 700 }}>
-                    0{i + 1} / 0{PAST.length}
-                  </span>
-
-                  {/* Conteúdo */}
-                  <div
-                    className="banner-content"
-                    style={{
-                      position: 'relative',
-                      zIndex: 1,
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: 'clamp(1.25rem,3vw,3rem)',
-                      gap: '1.5rem',
-                      flexWrap: 'wrap',
-                      transition: 'transform 0.5s ease',
-                    }}
-                  >
-                    {/* Esquerda: badge, título, botão */}
-                    <div style={{ maxWidth: '520px' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.85rem', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.25)', marginBottom: '0.9rem' }}>
-                        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#FF7B00', flexShrink: 0 }} />
-                        <span className="mono" style={{ fontSize: '0.7rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: '#fff', fontWeight: 700 }}>
-                          Realizada · {exp.state} · {exp.dateLabel}
-                        </span>
-                      </div>
-
-                      <h3 className="display" style={{ fontSize: 'clamp(1.8rem,4vw,3.2rem)', color: '#fff', lineHeight: 0.95, marginBottom: '1.1rem', textShadow: '0 4px 24px rgba(0,0,0,0.6)' }}>
-                        {exp.destination.toUpperCase()}
-                      </h3>
-
-                      {/* Zona de ação — botão minimalista */}
-                      <button
-                        className="gallery-btn"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.55rem',
-                          padding: '0.7rem 1.75rem',
-                          background: 'transparent',
-                          border: '1px solid rgba(255, 255, 255, 0.4)',
-                          color: '#fff',
-                          borderRadius: '99px',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        <span className="mono" style={{ fontSize: '0.75rem', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700 }}>Ver Galeria</span>
-                        <ArrowRight className="gallery-arrow" size={15} style={{ transition: 'transform 0.3s ease' }} />
-                      </button>
-                    </div>
-
-                    {/* Direita: Datas das Previsões */}
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <p className="mono" style={{ fontSize: '0.68rem', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: '0.5rem', fontWeight: 700 }}>
-                        Previsão Próxima Edição
-                      </p>
-                      <p className="display" style={{ fontSize: 'clamp(2.5rem,5vw,4rem)', color: '#FF7B00', lineHeight: 1 }}>
-                        {exp.nextEditionMonth}
-                      </p>
-                      <p className="display" style={{ fontSize: 'clamp(2.5rem,5vw,4rem)', color: '#FF7B00', lineHeight: 1 }}>
-                        {exp.nextEditionYear}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Modal da Galeria */}
       <AnimatePresence>
-        {galleryExp && (
-          <GalleryModal exp={galleryExp} onClose={() => setGalleryExp(null)} />
+        {selectedExpedition && (
+          <ExpeditionDialog expedition={selectedExpedition} onClose={() => setSelectedExpedition(null)} />
         )}
       </AnimatePresence>
     </main>

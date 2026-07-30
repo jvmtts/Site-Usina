@@ -138,7 +138,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const location = useLocation()
-  const isHero = location.pathname === '/'
+  const isHero = location.pathname === '/' || location.pathname === '/expedicoes'
   const transparent = isHero && !scrolled
 
   useEffect(() => {
