@@ -1,18 +1,47 @@
-// src/data/patrocinadores.ts
-
 export interface Patrocinador {
-  id: string | number;
-  nome: string;
-  logo?: string; // Opcional
-  link: string;
-  ativo: boolean;
+  id: string | number
+  nome: string
+  logo?: string
+  link: string
+  ativo: boolean
 }
 
-// Aqui você pode colocar os dados reais dos seus parceiros depois
+const SPONSOR_ASSET_PATH = '/images/LOGOS%20PATROCINADORES'
+
 export const patrocinadores: Patrocinador[] = [
-  { id: 1, nome: 'Marca 1', link: '', ativo: true },
-  { id: 2, nome: 'Marca 2', link: '#', ativo: true },
-  { id: 3, nome: 'Marca 3', link: '#', ativo: true },
-  { id: 4, nome: 'Marca 4', link: '#', ativo: true },
-  { id: 5, nome: 'Marca 5', link: '#', ativo: true },
-];
+  {
+    id: 1,
+    nome: 'Casarini',
+    logo: `${SPONSOR_ASSET_PATH}/1.png`,
+    link: '',
+    ativo: true,
+  },
+  {
+    id: 2,
+    nome: 'BicaJet.com',
+    logo: `${SPONSOR_ASSET_PATH}/2.png`,
+    link: '#',
+    ativo: true,
+  },
+  {
+    id: 3,
+    nome: 'Pro Life',
+    logo: `${SPONSOR_ASSET_PATH}/3.png`,
+    link: '#',
+    ativo: true,
+  },
+  {
+    id: 4,
+    nome: 'SAC Seguros Corretora',
+    logo: `${SPONSOR_ASSET_PATH}/4.png`,
+    link: '#',
+    ativo: true,
+  },
+  {
+    id: 5,
+    nome: 'RSAT Car',
+    logo: `${SPONSOR_ASSET_PATH}/5.png`,
+    link: '#',
+    ativo: true,
+  },
+]

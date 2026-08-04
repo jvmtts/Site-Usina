@@ -3,10 +3,29 @@ import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, X, ArrowUp, Search } from 'lucide-react'
 import { produtos, type Produto } from '@/data/produtos'
 import { motion, AnimatePresence } from 'framer-motion'
+import './Catalog.css'
+
+const CATALOG_BATCH_SIZE = 8
+
+const getInitialCatalogLimit = () => {
+  const storedLimit = Number.parseInt(sessionStorage.getItem('catalogLimite') || '', 10)
+  if (!Number.isFinite(storedLimit)) return CATALOG_BATCH_SIZE
+
+  return Math.max(
+    CATALOG_BATCH_SIZE,
+    Math.ceil(storedLimit / CATALOG_BATCH_SIZE) * CATALOG_BATCH_SIZE,
+  )
+}
 
 /* ─── WhatsApp Icon ──────────────────────────────────────────────── */
 const WhatsappIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+    style={{ width: '1.25rem', height: '1.25rem', flexShrink: 0 }}
+  >
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.305-.885-.653-1.482-1.46-1.656-1.758-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
   </svg>
 )
@@ -21,6 +40,7 @@ function ScrollToTopButton() {
   }, [])
   return (
     <button
+      className="catalog-scroll-top"
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       style={{
         position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 50,
@@ -69,36 +89,43 @@ function CardProduto({ produto }: { produto: Produto }) {
 
   return (
     <div
+      className="catalog-product-card"
       onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setImgIdx(0) }}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          handleClick()
+        }
+      }}
+      role="link"
+      tabIndex={0}
+      aria-label={`Ver detalhes de ${produto.nome}`}
       style={{
         background: '#fff',
         border: '1px solid #EBEBEB',
         cursor: 'pointer',
         display: 'flex', flexDirection: 'column',
-        transition: 'box-shadow 0.3s, transform 0.3s, border-color 0.3s',
-        ...(hovered ? {
-          boxShadow: '0 16px 48px rgba(0,0,0,0.1)',
-          transform: 'translateY(-4px)',
-          borderColor: '#DEDEDE',
-        } : {}),
       }}
     >
       {/* Imagem */}
-      <div style={{ position: 'relative', aspectRatio: '1/1', overflow: 'hidden', background: '#F7F7F5' }}>
+      <div className="catalog-product-media" style={{ position: 'relative', aspectRatio: '1/1', overflow: 'hidden', background: '#F7F7F5' }}>
         {imagens.map((src, i) => (
           <img
+            className="catalog-product-image"
             key={i}
             src={src}
             alt={produto.nome}
+            loading="lazy"
+            decoding="async"
             style={{
               position: 'absolute', inset: 0,
               width: '100%', height: '100%', objectFit: 'contain',
-              padding: '1.25rem',
-              transition: 'opacity 0.6s ease, transform 0.6s ease',
+              objectPosition: 'center',
+              padding: 0,
+              transition: 'opacity 0.6s ease',
               opacity: i === imgIdx ? 1 : 0,
-              transform: i === imgIdx && hovered ? 'scale(1.06)' : 'scale(1)',
               zIndex: i === imgIdx ? 1 : 0,
             }}
           />
@@ -128,7 +155,7 @@ function CardProduto({ produto }: { produto: Produto }) {
         )}
 
         {/* Badge categoria */}
-        <div style={{
+        <div className="catalog-category-badge" style={{
           position: 'absolute', top: '0.75rem', left: '0.75rem',
           background: '#fff', padding: '0.3rem 0.75rem',
           border: '1px solid #EBEBEB', zIndex: 2,
@@ -140,7 +167,7 @@ function CardProduto({ produto }: { produto: Produto }) {
       </div>
 
       {/* Info */}
-      <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
+      <div className="catalog-product-info" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
         <h3 style={{
           fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
           fontSize: '0.95rem', color: '#0A0A0A', lineHeight: 1.35,
@@ -158,7 +185,7 @@ function CardProduto({ produto }: { produto: Produto }) {
 
       {/* CTA */}
       <div style={{ padding: '0 1.5rem 1.5rem' }}>
-        <div style={{
+        <div className="catalog-card-cta" style={{
           width: '100%', padding: '0.75rem',
           border: '1.5px solid',
           borderColor: hovered ? '#FF7B00' : '#EBEBEB',
@@ -180,7 +207,7 @@ function Vitrine() {
   const [busca, setBusca]             = useState(() => sessionStorage.getItem('catalogBusca') || '')
   const [categoria, setCategoria]     = useState(() => sessionStorage.getItem('catalogCategoria') || 'Todos')
   const [lupaAberta, setLupaAberta]   = useState(() => sessionStorage.getItem('catalogLupa') === 'true')
-  const [limite, setLimite]           = useState(() => parseInt(sessionStorage.getItem('catalogLimite') || '9', 10))
+  const [limite, setLimite]           = useState(getInitialCatalogLimit)
   const [loadingMais, setLoadingMais] = useState(false)
   const inputRef                      = useRef<HTMLInputElement>(null)
 
@@ -229,7 +256,7 @@ function Vitrine() {
         !loadingMais && limite < filtrados.length
       ) {
         setLoadingMais(true)
-        setTimeout(() => { setLimite(p => p + 9); setLoadingMais(false) }, 500)
+        setTimeout(() => { setLimite(p => p + CATALOG_BATCH_SIZE); setLoadingMais(false) }, 500)
       }
     }
     window.addEventListener('scroll', fn, { passive: true })
@@ -238,7 +265,7 @@ function Vitrine() {
 
   const handleCategoria = (cat: string) => {
     setCategoria(cat)
-    setLimite(9)
+    setLimite(CATALOG_BATCH_SIZE)
   }
 
   const toggleLupa = () => {
@@ -289,7 +316,7 @@ function Vitrine() {
       </section>
 
       {/* Filtros + Lupa */}
-      <section style={{ borderBottom: '1px solid #EBEBEB', background: '#F7F7F5' }}>
+      <section className="catalog-toolbar" style={{ borderBottom: '1px solid #EBEBEB', background: '#F7F7F5' }}>
         <div className="wrap" style={{ paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
 
@@ -299,7 +326,7 @@ function Vitrine() {
                 <button
                   key={cat}
                   onClick={() => handleCategoria(cat)}
-                  className="mono"
+                  className={`mono catalog-filter-chip${categoria === cat ? ' is-active' : ''}`}
                   style={{
                     padding: '0.55rem 1.25rem',
                     fontSize: '0.65rem', fontWeight: 700,
@@ -316,7 +343,7 @@ function Vitrine() {
             </div>
 
             {/* Lupa expansível */}
-            <div style={{
+            <div className={`catalog-search${lupaAberta ? ' is-open' : ''}`} style={{
               display: 'flex', alignItems: 'center',
               background: lupaAberta ? '#fff' : 'transparent',
               border: lupaAberta ? '1.5px solid #FF7B00' : '1.5px solid #DEDEDE',
@@ -342,7 +369,7 @@ function Vitrine() {
                 type="text"
                 placeholder="Buscar produto..."
                 value={busca}
-                onChange={e => { setBusca(e.target.value); setLimite(9) }}
+                onChange={e => { setBusca(e.target.value); setLimite(CATALOG_BATCH_SIZE) }}
                 tabIndex={lupaAberta ? 0 : -1}
                 style={{
                   border: 'none', outline: 'none', background: 'transparent',
@@ -369,31 +396,24 @@ function Vitrine() {
       {/* Grid */}
       <section className="wrap" style={{ paddingTop: 'clamp(3rem,6vh,5rem)', paddingBottom: 'clamp(6rem,10vh,8rem)' }}>
         {exibidos.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '5rem 2rem', border: '1px dashed #EBEBEB' }}>
+          <div className="catalog-empty" style={{ textAlign: 'center', padding: '5rem 2rem', border: '1px dashed #EBEBEB' }}>
             <p className="display" style={{ fontSize: '2rem', color: '#DEDEDE', marginBottom: '1rem' }}>NENHUM RESULTADO</p>
             <p style={{ color: '#999', fontSize: '0.95rem' }}>Tente outro filtro ou limpe a busca.</p>
           </div>
         ) : (
           <motion.div
             layout
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: '1.5px',
-              background: '#EBEBEB',
-              border: '1px solid #EBEBEB',
-            }}
+            className="catalog-grid"
           >
             <AnimatePresence>
-              {exibidos.map(p => (
+              {exibidos.map((p, index) => (
                 <motion.div
                   layout
                   key={p.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.35 }}
-                  style={{ background: '#fff' }}
+                  initial={{ opacity: 0, y: 18, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.45, delay: Math.min(index % 9, 8) * 0.035, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <CardProduto produto={p} />
                 </motion.div>
@@ -547,15 +567,21 @@ function DetalheProduto() {
           </button>
 
           {/* Grid principal */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(3rem,6vw,7rem)', alignItems: 'start' }}
-               className="grid-cols-1">
+          <div className="catalog-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(3rem,6vw,7rem)', alignItems: 'start' }}>
 
             {/* Galeria */}
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem' }}>
+            <motion.div
+              className="catalog-detail-gallery"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem' }}
+            >
               {/* Thumbnails */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '72px', flexShrink: 0 }}>
                 {imagens.map((src, i) => (
                   <button
+                    className={`catalog-thumbnail${i === imgAtiva ? ' is-active' : ''}`}
                     key={i}
                     onMouseEnter={() => mudarImagem(i)}
                     onClick={() => mudarImagem(i)}
@@ -568,13 +594,14 @@ function DetalheProduto() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
                   >
-                    <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <img src={src} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center' }} />
                   </button>
                 ))}
               </div>
 
               {/* Imagem principal */}
               <div
+                className="catalog-detail-media"
                 onClick={() => setZoomAberto(true)}
                 style={{
                   flexGrow: 1, aspectRatio: '1/1',
@@ -585,6 +612,7 @@ function DetalheProduto() {
               >
                 <AnimatePresence initial={false} custom={direction}>
                   <motion.img
+                    className="catalog-detail-main-image"
                     key={imagens[imgAtiva]}
                     src={imagens[imgAtiva]}
                     alt={produto.nome}
@@ -592,15 +620,21 @@ function DetalheProduto() {
                     variants={slideVariants}
                     initial="enter" animate="center" exit="exit"
                     transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', padding: '1.5rem' }}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', padding: 0 }}
                     draggable={false}
                   />
                 </AnimatePresence>
               </div>
-            </div>
+            </motion.div>
 
             {/* Info produto */}
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <motion.div
+              className="catalog-detail-info"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.65, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+              style={{ display: 'flex', flexDirection: 'column' }}
+            >
               <span className="eyebrow" style={{ marginBottom: '1rem' }}>
                 {Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria}
               </span>
@@ -628,6 +662,7 @@ function DetalheProduto() {
                             const ativo = sel === opcao
                             return (
                               <button
+                                className={`catalog-variation-option${ativo ? ' is-active' : ''}`}
                                 key={opcao}
                                 onClick={() => setSelecoes(p => ({ ...p, [v.nome]: opcao }))}
                                 style={{
@@ -654,6 +689,7 @@ function DetalheProduto() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <a
                   href={waLink} target="_blank" rel="noopener noreferrer"
+                  className="catalog-buy-button catalog-buy-whatsapp"
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     padding: '1rem 2rem', background: '#1DB954',
@@ -687,7 +723,7 @@ function DetalheProduto() {
 
                 <a
                   href={mlLink} target="_blank" rel="noopener noreferrer"
-                  className="btn-outline"
+                  className="btn-outline catalog-buy-button catalog-buy-marketplace"
                   style={{ justifyContent: 'center', gap: '0.75rem' }}
                 >
                   <img
@@ -698,11 +734,18 @@ function DetalheProduto() {
                   Comprar no Mercado Livre
                 </a>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Descrição + Ficha */}
-          <div style={{ marginTop: 'clamp(4rem,8vh,6rem)', paddingTop: 'clamp(3rem,5vh,4rem)', borderTop: '1px solid #EBEBEB' }}>
+          <motion.div
+            className="catalog-product-description"
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.18 }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            style={{ marginTop: 'clamp(4rem,8vh,6rem)', paddingTop: 'clamp(3rem,5vh,4rem)', borderTop: '1px solid #EBEBEB' }}
+          >
             <h3 className="eyebrow" style={{ color: '#FF7B00', marginBottom: '1.5rem', fontSize: '0.75rem' }}>
               Descrição do Produto
             </h3>
@@ -715,7 +758,7 @@ function DetalheProduto() {
                 <h3 className="eyebrow" style={{ color: '#FF7B00', marginBottom: '1.5rem', fontSize: '0.75rem' }}>
                   Especificações Técnicas
                 </h3>
-                <div style={{ border: '1px solid #EBEBEB', overflow: 'hidden', maxWidth: '680px' }}>
+                <div className="catalog-spec-table" style={{ border: '1px solid #EBEBEB', overflow: 'hidden', maxWidth: '680px' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <tbody>
                       {Object.entries(produto.fichaTecnica).map(([k, v], i) => (
@@ -729,7 +772,7 @@ function DetalheProduto() {
                 </div>
               </>
             )}
-          </div>
+          </motion.div>
         </div>
       </main>
 

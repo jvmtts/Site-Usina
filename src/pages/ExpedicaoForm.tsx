@@ -1,10 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, Plus, Minus, Trash2, Check,
   User, ChevronDown, Upload, X, AlertCircle
 } from 'lucide-react'
+import { REGISTRATION_SECTION_ID } from '../config/routes'
+
+const FORMULARIO_IMAGE_ROOT = '/images/Formulario'
+const FORM_BACKGROUND_IMAGE = `${FORMULARIO_IMAGE_ROOT}/CamposFormulario.png`
+const USINA_WHITE_LOGO = `${FORMULARIO_IMAGE_ROOT}/logo%20usina%201000px%20x%201000px.png`
+const ALISSON_LOGO = `${FORMULARIO_IMAGE_ROOT}/logo%20alisson%201000px%20x%201000px.png`
 
 /* ── Tipos ───────────────────────────────────────────────────────── */
 interface Acompanhante {
@@ -1069,24 +1074,9 @@ export default function ExpedicaoForm() {
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section style={{ position: 'relative', paddingTop: 'clamp(4rem,10vh,7rem)', paddingBottom: 'clamp(3rem,6vh,5rem)', overflow: 'hidden', background: '#0A0A0A', minHeight: '300px', display: 'flex', alignItems: 'flex-end' }}>
         <div style={{ position: 'absolute', inset: 0 }}>
-          <img src="/images/CamposFormulario.png" alt="Campos do Jordão" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />
+          <img src={FORM_BACKGROUND_IMAGE} alt="Campos do Jordão" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,10,0.98) 0%, rgba(10,10,10,0.5) 60%, rgba(10,10,10,0.15) 100%)' }} />
         </div>
-
-        <Link
-          to="/"
-          className="mono"
-          style={{
-            position: 'absolute', top: 'clamp(1.25rem, 3vh, 2rem)', left: 'clamp(1.25rem, 4vw, 2.5rem)', zIndex: 2,
-            display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.6)',
-            fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase' as const, textDecoration: 'none',
-            transition: 'color 0.2s',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
-        >
-          <ArrowLeft size={13} /> Voltar
-        </Link>
 
         <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '1400px', margin: '0 auto', padding: '0 clamp(1.5rem, 5vw, 7rem)', display: 'flex', justifyContent: 'center' }}>
           
@@ -1098,7 +1088,7 @@ export default function ExpedicaoForm() {
               initial={{ opacity: 0, scale: 0.9, x: -40 }} 
               animate={{ opacity: 1, scale: 1, x: 0 }} 
               transition={{ duration: 0.9, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              src="/images/logo usina 1000px x 1000px.png" 
+              src={USINA_WHITE_LOGO}
               alt="Usina do Jet" 
               style={{ width: 'clamp(140px, 20vw, 220px)', height: 'auto', objectFit: 'contain', flexShrink: 0 }} 
             />
@@ -1153,7 +1143,7 @@ export default function ExpedicaoForm() {
               initial={{ opacity: 0, scale: 0.9, x: 40 }} 
               animate={{ opacity: 1, scale: 1, x: 0 }} 
               transition={{ duration: 0.9, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              src="/images/logo alisson 1000px x 1000px.png" 
+              src={ALISSON_LOGO}
               alt="Alisson Guedes Jet" 
               style={{ width: 'clamp(170px, 26vw, 270px)', height: 'auto', objectFit: 'contain', flexShrink: 0 }} 
             />
@@ -1163,7 +1153,14 @@ export default function ExpedicaoForm() {
       </section>
 
       {/* ── FORMULÁRIO ───────────────────────────────────────── */}
-      <section style={{ padding: 'clamp(3rem,6vh,5rem) clamp(1.5rem,5vw,7rem) clamp(6rem,10vh,8rem)' }}>
+      <section
+        id={REGISTRATION_SECTION_ID}
+        aria-label="Formulário de inscrição"
+        style={{
+          padding: 'clamp(3rem,6vh,5rem) clamp(1.5rem,5vw,7rem) clamp(6rem,10vh,8rem)',
+          scrollMarginTop: '6rem',
+        }}
+      >
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
 
           <div style={{ marginBottom: '3rem' }}>

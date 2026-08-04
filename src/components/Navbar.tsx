@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUpRight, Menu, X } from 'lucide-react'
+import {
+  EXPEDITION_PATH,
+  REGISTRATION_PATH,
+  REGISTRATION_SECTION_ID,
+  REGISTRATION_TARGET,
+} from '../config/routes'
+import { scrollToSection } from '../utils/scrollToSection'
 
 const links = [
   { label: 'Início', path: '/' },
@@ -21,9 +28,14 @@ function NavCta({ transparent = false, compact = false, mobile = false }: NavCta
 
   return (
     <Link
-      to="/expedicoes"
+      to={REGISTRATION_TARGET}
       className={mobile ? undefined : 'hidden md:inline-flex'}
-      aria-label="Ver expedições com vagas abertas"
+      onClick={() => {
+        window.requestAnimationFrame(() => {
+          scrollToSection(REGISTRATION_SECTION_ID)
+        })
+      }}
+      aria-label="Garantir vaga na expedição"
       onMouseEnter={() => setActive(true)}
       onMouseLeave={() => setActive(false)}
       onFocus={() => setActive(true)}
@@ -138,8 +150,17 @@ export default function Navbar({ revealed = true }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const location = useLocation()
-  const isHero = location.pathname === '/' || location.pathname === '/expedicoes'
+  const isHero =
+    location.pathname === '/' ||
+    location.pathname === '/expedicoes' ||
+    location.pathname === EXPEDITION_PATH ||
+    location.pathname === REGISTRATION_PATH ||
+    location.pathname === '/inscricao'
   const transparent = isHero && !scrolled
+  const isLinkActive = (path: string) =>
+    path === '/expedicoes'
+      ? location.pathname.startsWith('/expedicoes')
+      : location.pathname === path
 
   useEffect(() => {
     const updateNavbar = () => setScrolled(window.scrollY > 60)
@@ -232,7 +253,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
             style={{ alignItems: 'center', gap: '2.5rem', listStyle: 'none' }}
           >
             {links.map((link) => {
-              const active = location.pathname === link.path
+              const active = isLinkActive(link.path)
 
               return (
                 <li key={link.path} style={{ position: 'relative' }}>
@@ -340,7 +361,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
                   className="display"
                   style={{
                     fontSize: 'clamp(2.5rem, 9vw, 5rem)',
-                    color: location.pathname === link.path ? '#FF7B00' : '#DEDEDE',
+                    color: isLinkActive(link.path) ? '#FF7B00' : '#DEDEDE',
                     textDecoration: 'none',
                     transition: 'color 0.2s',
                   }}
@@ -349,7 +370,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
                   }}
                   onMouseLeave={(event) => {
                     event.currentTarget.style.color =
-                      location.pathname === link.path ? '#FF7B00' : '#DEDEDE'
+                      isLinkActive(link.path) ? '#FF7B00' : '#DEDEDE'
                   }}
                 >
                   {link.label.toUpperCase()}

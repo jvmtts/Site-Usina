@@ -4,24 +4,26 @@ import { motion, type Variants } from 'framer-motion'
 import {
   ChevronDown, Tent, Wrench, MapPinned, UtensilsCrossed, ShieldCheck, Users, ImageOff, ArrowRight, Check, Phone,
 } from 'lucide-react'
-import TopBar from '../components/TopBar'
 import TrailLine from '../components/TrailLine'
 import Lightbox from '../components/LightBox'
+import { REGISTRATION_TARGET } from '../config/routes'
 
 /* ────────────────────────────────────────────────────────────────────
    CONFIGURAÇÃO DE CONTEÚDO
 ──────────────────────────────────────────────────────────────────── */
-const HERO_IMAGE = '/images/CamposFormulario.png'
+const FORMULARIO_IMAGE_ROOT = '/images/Formulario'
+const HERO_IMAGE = `${FORMULARIO_IMAGE_ROOT}/CamposFormulario.png`
+const USINA_WHITE_LOGO = `${FORMULARIO_IMAGE_ROOT}/logo%20usina%201000px%20x%201000px.png`
 
 const GALERIA_INSTAGRAM = [
-  { src: '/images/Carrosel/imagem1.jpeg', alt: 'Roteiro da expedição — dia 1' },
-  { src: '/images/Carrosel/imagem2.jpeg', alt: 'Roteiro da expedição — dia 2' },
-  { src: '/images/Carrosel/imagem3.jpeg', alt: 'Estrutura de apoio' },
-  { src: '/images/Carrosel/imagem4.jpeg', alt: 'Hospedagem' },
-  { src: '/images/Carrosel/imagem5.jpeg', alt: 'Trilhas e paisagens' },
-  { src: '/images/Carrosel/imagem6.jpeg', alt: 'O que levar' },
-  { src: '/images/Carrosel/imagem7.jpeg', alt: 'Regras de segurança' },
-  { src: '/images/Carrosel/imagem8.jpeg', alt: 'Edição anterior' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem1.jpeg`, alt: 'Roteiro da expedição — dia 1' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem2.jpeg`, alt: 'Roteiro da expedição — dia 2' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem3.jpeg`, alt: 'Estrutura de apoio' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem4.jpeg`, alt: 'Hospedagem' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem5.jpeg`, alt: 'Trilhas e paisagens' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem6.jpeg`, alt: 'O que levar' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem7.jpeg`, alt: 'Regras de segurança' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem8.jpeg`, alt: 'Edição anterior' },
 ]
 
 const INCLUSOS = [
@@ -39,7 +41,7 @@ const ROTEIRO = [
     dia: 'Dia 1',
     data: 'Sexta-feira',
     titulo: 'Chegada e abertura',
-    imagem: '/images/imagensRoteiro/imagem3.png',
+    imagem: `${FORMULARIO_IMAGE_ROOT}/imagensRoteiro/imagem3.png`,
     atividades: [
       'Check-in no evento e no hotel em Campos do Jordão',
       'Jantar de abertura e reunião com participantes',
@@ -51,7 +53,7 @@ const ROTEIRO = [
     dia: 'Dia 2',
     data: 'Sábado',
     titulo: 'Roteiro off-road',
-    imagem: '/images/imagensRoteiro/imagem2.png',
+    imagem: `${FORMULARIO_IMAGE_ROOT}/imagensRoteiro/imagem2.png`,
     atividades: [
       'Café da manhã',
       'Cachoeiras, trilhas e estradas de terra',
@@ -65,7 +67,7 @@ const ROTEIRO = [
     dia: 'Dia 3',
     data: 'Domingo',
     titulo: 'Pico do Itapeva e fábrica de chocolate',
-    imagem: '/images/imagensRoteiro/imagem1.png',
+    imagem: `${FORMULARIO_IMAGE_ROOT}/imagensRoteiro/imagem1.png`,
     atividades: [
       'Café da manhã no Pico do Itapeva — ponto mais alto da região (2.030m)',
       'Almoço na fábrica de chocolate',
@@ -75,12 +77,12 @@ const ROTEIRO = [
 
 /* ── Grid de fotos da expedição (3x2) ───────────────────────────── */
 const FOTOS_EXPEDICAO = [
-  { src: '/images/imagensExpedicao/foto1.jpg', alt: 'Fachada do hotel em Campos do Jordão' },
-  { src: '/images/imagensExpedicao/foto2.jpg', alt: 'Quadriciclos alinhados antes da trilha' },
-  { src: '/images/imagensExpedicao/foto3.jpg', alt: 'Grupo no trajeto off-road' },
-  { src: '/images/imagensExpedicao/foto4.jpg', alt: 'Fábrica de chocolate' },
-  { src: '/images/imagensExpedicao/foto5.jpg', alt: 'Trilha entre a neblina da serra' },
-  { src: '/images/imagensExpedicao/foto6.jpg', alt: 'Comboio de quadriciclos em movimento' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem1.jpeg`, alt: 'Fachada do hotel em Campos do Jordão' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem2.jpeg`, alt: 'Quadriciclos alinhados antes da trilha' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem3.jpeg`, alt: 'Grupo no trajeto off-road' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem4.jpeg`, alt: 'Fábrica de chocolate' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem5.jpeg`, alt: 'Trilha entre a neblina da serra' },
+  { src: `${FORMULARIO_IMAGE_ROOT}/Carrosel/imagem6.jpeg`, alt: 'Comboio de quadriciclos em movimento' },
 ]
 
 /* ── Variantes de animação reutilizáveis ─────────────────────────── */
@@ -242,8 +244,6 @@ export default function ExpedicaoLanding() {
 
   return (
     <div style={{ background: '#fff' }}>
-      <TopBar />
-
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section
         style={{
@@ -280,7 +280,7 @@ export default function ExpedicaoLanding() {
           </motion.p>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }}>
-            <Link to="/inscricao" className="btn-primary" style={{ padding: '1.15rem 2.75rem', fontSize: '0.78rem' }}>
+            <Link to={REGISTRATION_TARGET} className="btn-primary" style={{ padding: '1.15rem 2.75rem', fontSize: '0.78rem' }}>
               Quero minha vaga <ArrowRight size={16} />
             </Link>
           </motion.div>
@@ -526,7 +526,7 @@ export default function ExpedicaoLanding() {
             Vagas limitadas para a expedição de agosto em Campos do Jordão. Garanta a sua antes que a turma feche.
           </motion.p>
           <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: '-80px' }} variants={fadeUp}>
-            <Link to="/inscricao" className="btn-primary" style={{ padding: '1.15rem 2.75rem', fontSize: '0.78rem' }}>
+            <Link to={REGISTRATION_TARGET} className="btn-primary" style={{ padding: '1.15rem 2.75rem', fontSize: '0.78rem' }}>
               Quero minha vaga <ArrowRight size={16} />
             </Link>
           </motion.div>
@@ -536,7 +536,7 @@ export default function ExpedicaoLanding() {
       {/* ── FOOTER ───────────────────────────────────────────── */}
       <footer style={{ background: '#0A0A0A', borderTop: '1px solid rgba(255,255,255,0.08)', padding: '2rem 0' }}>
         <div className="wrap wrap-mobile-pad" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
-          <img src="/images/logo usina 1000px x 1000px.png" alt="Usina do Jet" style={{ height: '2.25rem', width: 'auto', objectFit: 'contain' }} />
+          <img src={USINA_WHITE_LOGO} alt="Usina do Jet" style={{ height: '2.25rem', width: 'auto', objectFit: 'contain' }} />
           <p className="mono" style={{ fontSize: '0.62rem', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)' }}>
             © 2026 Usina do Jet. Todos os direitos reservados.
           </p>

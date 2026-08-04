@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 
+const FORMULARIO_IMAGE_ROOT = '/images/Formulario'
+const USINA_WHITE_LOGO = `${FORMULARIO_IMAGE_ROOT}/logo%20usina%201000px%20x%201000px.png`
+const USINA_BLACK_LOGO = `${FORMULARIO_IMAGE_ROOT}/Usina-logo-Preto.png`
+
 /**
  * Barra superior minimalista para a landing da expedição.
  * Diferente da Navbar do site principal: aqui não há links de navegação,
@@ -20,8 +24,8 @@ export default function TopBar() {
   const transparent = !scrolled
 
   const logoSrc = transparent
-    ? '/images/logo usina 1000px x 1000px.png'
-    : '/images/Usina-logo-Preto.png'
+    ? USINA_WHITE_LOGO
+    : USINA_BLACK_LOGO
 
   return (
     <header

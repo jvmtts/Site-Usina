@@ -10,6 +10,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
+import { EXPEDITION_PATH, REGISTRATION_PATH } from './config/routes'
+import { scrollToSection } from './utils/scrollToSection'
 
 const Expeditions = lazy(() => import('./pages/Expeditions'))
 const Catalog = lazy(() => import('./pages/Catalog'))
@@ -17,15 +19,49 @@ const Contact = lazy(() => import('./pages/Contact'))
 const ExpedicaoLanding = lazy(() => import('./pages/ExpedicaoLanding'))
 const ExpedicaoForm = lazy(() => import('./pages/ExpedicaoForm'))
 
-const EXPEDITION_PATH = '/expedicoes/campos-do-jordao-2026'
-const REGISTRATION_PATH = `${EXPEDITION_PATH}/inscricao`
-
 function ScrollToTop() {
-  const { pathname } = useLocation()
+  const { pathname, hash } = useLocation()
 
   useEffect(() => {
+    if (hash) {
+      const targetId = decodeURIComponent(hash.slice(1))
+      let observer: MutationObserver | null = null
+      let frameId = 0
+      let settleTimeoutId = 0
+
+      const scrollToTarget = () => {
+        if (scrollToSection(targetId, 'auto')) {
+          frameId = window.requestAnimationFrame(() => {
+            scrollToSection(targetId, 'auto')
+
+            settleTimeoutId = window.setTimeout(() => {
+              scrollToSection(targetId, 'auto')
+            }, 400)
+          })
+          observer?.disconnect()
+          return true
+        }
+
+        return false
+      }
+
+      if (!scrollToTarget()) {
+        observer = new MutationObserver(scrollToTarget)
+        observer.observe(document.body, { childList: true, subtree: true })
+      }
+
+      const timeoutId = window.setTimeout(() => observer?.disconnect(), 5000)
+
+      return () => {
+        observer?.disconnect()
+        window.cancelAnimationFrame(frameId)
+        window.clearTimeout(settleTimeoutId)
+        window.clearTimeout(timeoutId)
+      }
+    }
+
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-  }, [pathname])
+  }, [hash, pathname])
 
   return null
 }
@@ -152,7 +188,7 @@ function AppShell() {
     <div className="site-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
       <ScrollToTop />
-      {!isExpeditionFlow && <Navbar revealed={homeContentVisible} />}
+      <Navbar revealed={homeContentVisible} />
       <main id="main-content" className="app-main" tabIndex={-1}>
         <AnimatedRoutes
           introActive={homeIntroActive}
