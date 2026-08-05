@@ -1072,7 +1072,7 @@ export default function ExpedicaoForm() {
     <div style={{ background: '#fff', minHeight: '100vh' }} ref={topRef}>
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', paddingTop: 'clamp(4rem,10vh,7rem)', paddingBottom: 'clamp(3rem,6vh,5rem)', overflow: 'hidden', background: '#0A0A0A', minHeight: '300px', display: 'flex', alignItems: 'flex-end' }}>
+      <section style={{ position: 'relative', paddingTop: 'clamp(8.5rem,16vh,10rem)', paddingBottom: 'clamp(3.5rem,7vh,5rem)', overflow: 'hidden', background: '#0A0A0A', minHeight: 'clamp(540px,72svh,680px)', display: 'flex', alignItems: 'center' }}>
         <div style={{ position: 'absolute', inset: 0 }}>
           <img src={FORM_BACKGROUND_IMAGE} alt="Campos do Jordão" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,10,0.98) 0%, rgba(10,10,10,0.5) 60%, rgba(10,10,10,0.15) 100%)' }} />

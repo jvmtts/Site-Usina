@@ -6,7 +6,7 @@ export interface Patrocinador {
   ativo: boolean
 }
 
-const SPONSOR_ASSET_PATH = '/images/LOGOS%20PATROCINADORES'
+const SPONSOR_ASSET_PATH = '/images/sponsors'
 
 export const patrocinadores: Patrocinador[] = [
   {

@@ -25,7 +25,7 @@ import {
   Plus,
   X,
 } from 'lucide-react'
-import { patrocinadores } from '../data/patrocinadores'
+import { patrocinadores, type Patrocinador } from '../data/patrocinadores'
 import BrandIntro from '../components/BrandIntro'
 import HeroMedia from '../components/HeroMedia'
 
@@ -300,7 +300,7 @@ function ManifestoSection() {
               Desde 2018, reunimos pessoas movidas pela descoberta. Cada expedição nasce do cuidado com o roteiro, da estrutura de apoio e da vontade de viver a paisagem de um jeito mais intenso.
             </p>
             <Link to="/expedicoes" className="text-link">
-              Conheça nossas experiências <ArrowRight aria-hidden="true" size={18} />
+              Conheça nossas expedições <ArrowRight aria-hidden="true" size={18} />
             </Link>
           </motion.div>
 
@@ -573,6 +573,21 @@ function ServicesSection() {
     </section>
   )
 }
+function SponsorLogo({ sponsor }: { sponsor: Patrocinador }) {
+  const [failed, setFailed] = useState(false)
+
+  if (!sponsor.logo || failed) return <span>{sponsor.nome}</span>
+
+  return (
+    <img
+      src={sponsor.logo}
+      alt={sponsor.nome}
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 function SponsorMarquee({ className = '' }: { className?: string }) {
   const reduceMotion = useReducedMotion()
 
@@ -611,11 +626,7 @@ function SponsorMarquee({ className = '' }: { className?: string }) {
                   aria-hidden={isDuplicate ? 'true' : undefined}
                   aria-label={isDuplicate ? undefined : `Conhecer ${sponsor.nome}`}
                 >
-                  {sponsor.logo ? (
-                    <img src={sponsor.logo} alt={sponsor.nome} loading="lazy" />
-                  ) : (
-                    <span>{sponsor.nome}</span>
-                  )}
+                  <SponsorLogo sponsor={sponsor} />
                 </a>
               )
             })}
@@ -910,7 +921,7 @@ function NextExpeditionSection() {
       <div className="wrap">
         <Reveal className="next-heading">
           <div>
-            <span className="eyebrow">Próxima experiência</span>
+            <span className="eyebrow">Próxima expedição</span>
             <h2 id="next-title" className="display section-title">
               Campos do Jordão
             </h2>
@@ -980,7 +991,7 @@ function NextExpeditionSection() {
               </div>
               <div>
                 <dt>Disponibilidade</dt>
-                <dd>7 vagas</dd>
+                <dd>poucas vagas</dd>
               </div>
               <div>
                 <dt>Investimento</dt>
@@ -1068,12 +1079,20 @@ export default function Home({
                 {['O Brasil visto', 'de outro ângulo.'].map((line, index) => (
                   <span className="hero-title-mask" key={line}>
                     <motion.span
-                      initial={reduceMotion ? false : { y: '105%' }}
-                      animate={{ y: heroContentVisible ? 0 : '105%' }}
+                      initial={reduceMotion ? false : { y: '125%', opacity: 0 }}
+                      animate={heroContentVisible
+                        ? { y: 0, opacity: 1 }
+                        : { y: '125%', opacity: 0 }}
                       transition={{
-                        duration: reduceMotion ? 0 : 0.9,
-                        delay: reduceMotion ? 0 : 0.16 + index * 0.1,
-                        ease: [0.16, 1, 0.3, 1],
+                        y: {
+                          duration: reduceMotion ? 0 : 0.9,
+                          delay: reduceMotion ? 0 : 0.16 + index * 0.1,
+                          ease: [0.16, 1, 0.3, 1],
+                        },
+                        opacity: {
+                          duration: reduceMotion ? 0 : 0.01,
+                          delay: reduceMotion ? 0 : 0.16 + index * 0.1,
+                        },
                       }}
                     >
                       {line}

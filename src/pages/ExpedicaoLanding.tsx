@@ -247,8 +247,9 @@ export default function ExpedicaoLanding() {
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section
         style={{
-          position: 'relative', minHeight: '100svh', display: 'flex', flexDirection: 'column',
+          position: 'relative', minHeight: 'max(100svh, 760px)', display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#0A0A0A',
+          padding: 'clamp(8rem, 15vh, 10rem) 0 clamp(7.5rem, 14vh, 9rem)',
         }}
       >
         <div style={{ position: 'absolute', inset: 0 }}>
@@ -259,21 +260,21 @@ export default function ExpedicaoLanding() {
         <div className="wrap" style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '0 1.5rem' }}>
           <motion.span
             initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="mono" style={{ color: '#FF7B00', fontSize: 'clamp(1.35rem, 3.4vw, 1.9rem)', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' as const, marginBottom: '1.75rem' }}
+            className="mono" style={{ color: '#FF7B00', fontSize: 'clamp(0.85rem, 1.6vw, 1.1rem)', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' as const, marginBottom: '1.25rem' }}
           >
             Expedição Off-Road · 2026
           </motion.span>
 
           <motion.h1
             initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.85, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="display" style={{ color: '#fff', fontSize: 'clamp(3rem, 10vw, 8rem)', marginBottom: '1.5rem', lineHeight: 1.1 }}
+            className="display" style={{ color: '#fff', fontSize: 'clamp(3rem, 7.6vw, 6.5rem)', marginBottom: '1.5rem', lineHeight: 0.98, maxWidth: '100%' }}
           >
             CAMPOS DO<br />JORDÃO
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.7, delay: 0.35 }}
-            style={{ color: 'rgba(255,255,255,0.75)', fontSize: 'clamp(0.95rem, 1.6vw, 1.15rem)', maxWidth: '540px', lineHeight: 1.7, marginBottom: '2.5rem' }}
+            style={{ color: 'rgba(255,255,255,0.75)', fontSize: 'clamp(0.95rem, 1.6vw, 1.15rem)', maxWidth: '540px', lineHeight: 1.7, marginBottom: '2rem' }}
           >
             Oito dias de UTV e quadriciclo entre serra, neblina e trilha técnica.
             Uma expedição fechada, com apoio total, pra quem quer sentir a estrada de verdade.
@@ -287,7 +288,7 @@ export default function ExpedicaoLanding() {
 
           <motion.p
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.65 }}
-            className="mono" style={{ color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(0.8rem, 1.6vw, 0.95rem)', fontWeight: 700, letterSpacing: '0.14em', marginTop: '1.5rem' }}
+            className="mono" style={{ color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(0.76rem, 1.4vw, 0.9rem)', fontWeight: 700, letterSpacing: '0.12em', marginTop: '1.25rem' }}
           >
             21–23 de Agosto · Saída de São Paulo
           </motion.p>
@@ -295,7 +296,7 @@ export default function ExpedicaoLanding() {
 
         <motion.div
           animate={{ y: [0, 8, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ position: 'absolute', bottom: 'clamp(1.5rem, 4vh, 3rem)', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.6)' }}
+          style={{ position: 'absolute', bottom: 'clamp(1.25rem, 3vh, 2rem)', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', color: 'rgba(255,255,255,0.6)' }}
         >
           <span className="mono" style={{ fontSize: 'clamp(0.7rem, 1.3vw, 0.8rem)', fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' as const }}>Role para conhecer</span>
           <ChevronDown size={20} />
