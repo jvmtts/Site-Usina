@@ -71,7 +71,7 @@ const services = [
     number: '02',
     title: 'Catálogo selecionado',
     description: 'Uma seleção para quem quer entrar na água, renovar o equipamento ou encontrar a próxima oportunidade no universo do jet.',
-    story: 'Escolher bem também faz parte da experiência de quem vive — ou quer começar a viver — esse universo.',
+    story: 'Escolher bem também faz parte da experiência de quem já vive esse universo ou quer começar a vivê-lo.',
     image: '/images/image5.png',
     imageAlt: 'Jet ski selecionado para o catálogo da Usina do Jet',
     gallery: [
@@ -253,7 +253,7 @@ function ManifestoSection() {
             aria-hidden="true"
             style={{ scaleX: reduceMotion ? 1 : wakeProgress }}
           />
-          <span className="manifesto-index mono">01 — Nossa história</span>
+          <span className="manifesto-index mono">01 / Nossa história</span>
           <span className="manifesto-signature mono" aria-hidden="true">
             Brasil · Desde 2018
           </span>

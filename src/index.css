@@ -657,10 +657,12 @@ a {
 }
 
 .hero-kicker::before {
-  width: 2.75rem;
-  height: 2px;
+  width: 0.5rem;
+  height: 0.5rem;
   flex: 0 0 auto;
   background: var(--brand);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.3rem rgba(255, 123, 0, 0.12);
   content: '';
 }
 
@@ -1006,10 +1008,11 @@ a {
 }
 
 .services-guidance::before {
-  width: 2.6rem;
-  height: 1px;
+  width: 0.42rem;
+  height: 0.42rem;
   flex: 0 0 auto;
   background: var(--brand);
+  border-radius: 50%;
   content: '';
 }
 

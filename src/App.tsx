@@ -18,11 +18,24 @@ const Catalog = lazy(() => import('./pages/Catalog'))
 const Contact = lazy(() => import('./pages/Contact'))
 const ExpedicaoLanding = lazy(() => import('./pages/ExpedicaoLanding'))
 const ExpedicaoForm = lazy(() => import('./pages/ExpedicaoForm'))
+const CATALOG_SCROLL_KEY = 'catalogScrollY'
+const CATALOG_RESTORE_KEY = 'catalogRestorePending'
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation()
 
   useEffect(() => {
+    const shouldRestoreCatalog =
+      pathname === '/catalogo' &&
+      sessionStorage.getItem(CATALOG_RESTORE_KEY) === 'true'
+
+    if (shouldRestoreCatalog) return
+
+    if (!pathname.startsWith('/catalogo')) {
+      sessionStorage.removeItem(CATALOG_SCROLL_KEY)
+      sessionStorage.removeItem(CATALOG_RESTORE_KEY)
+    }
+
     if (hash) {
       const targetId = decodeURIComponent(hash.slice(1))
       let observer: MutationObserver | null = null
