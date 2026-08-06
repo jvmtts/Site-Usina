@@ -30,7 +30,7 @@ import BrandIntro from '../components/BrandIntro'
 import HeroMedia from '../components/HeroMedia'
 
 const EXPEDITION_PATH = '/expedicoes/campos-do-jordao-2026'
-const activeSponsors = patrocinadores.filter((sponsor) => sponsor.ativo)
+const activeBrands = patrocinadores.filter((brand) => brand.ativo)
 
 const destinations = [
   {
@@ -573,15 +573,15 @@ function ServicesSection() {
     </section>
   )
 }
-function SponsorLogo({ sponsor }: { sponsor: Patrocinador }) {
+function BrandLogo({ brand }: { brand: Patrocinador }) {
   const [failed, setFailed] = useState(false)
 
-  if (!sponsor.logo || failed) return <span>{sponsor.nome}</span>
+  if (!brand.logo || failed) return <span>{brand.nome}</span>
 
   return (
     <img
-      src={sponsor.logo}
-      alt={sponsor.nome}
+      src={brand.logo}
+      alt={brand.nome}
       loading="eager"
       decoding="async"
       draggable={false}
@@ -590,45 +590,45 @@ function SponsorLogo({ sponsor }: { sponsor: Patrocinador }) {
   )
 }
 
-function SponsorMarquee({ className = '' }: { className?: string }) {
+function BrandTrack({ className = '' }: { className?: string }) {
   const reduceMotion = useReducedMotion()
 
-  if (activeSponsors.length === 0) return null
+  if (activeBrands.length === 0) return null
 
-  const shouldAnimate = !reduceMotion && activeSponsors.length > 1
+  const shouldAnimate = !reduceMotion && activeBrands.length > 1
   const minimumItems = 6
-  const repeats = Math.max(1, Math.ceil(minimumItems / activeSponsors.length))
-  const marqueeSponsors = shouldAnimate
-    ? Array.from({ length: repeats }, () => activeSponsors).flat()
-    : activeSponsors
+  const repeats = Math.max(1, Math.ceil(minimumItems / activeBrands.length))
+  const trackBrands = shouldAnimate
+    ? Array.from({ length: repeats }, () => activeBrands).flat()
+    : activeBrands
 
   return (
     <div
-      className={`sponsor-marquee${shouldAnimate ? ' is-moving' : ' is-static'}${className ? ` ${className}` : ''}`}
+      className={`brand-track${shouldAnimate ? ' is-moving' : ' is-static'}${className ? ` ${className}` : ''}`}
     >
-      <div className="sponsor-marquee-track">
+      <div className="brand-track-inner">
         {[0, 1].map((groupIndex) => (
           <div
-            className="sponsor-marquee-group"
+            className="brand-track-group"
             aria-hidden={groupIndex === 1 ? 'true' : undefined}
             key={groupIndex}
           >
-            {marqueeSponsors.map((sponsor, index) => {
-              const isDuplicate = groupIndex === 1 || index >= activeSponsors.length
+            {trackBrands.map((brand, index) => {
+              const isDuplicate = groupIndex === 1 || index >= activeBrands.length
 
               return (
                 <a
-                  key={`${groupIndex}-${sponsor.id}-${index}`}
-                  href={sponsor.link}
+                  key={`${groupIndex}-${brand.id}-${index}`}
+                  href={brand.link}
                   target="_blank"
-                  rel="noopener noreferrer sponsored"
-                  className="sponsor-link"
-                  data-sponsor-id={sponsor.id}
+                  rel="noopener noreferrer"
+                  className="brand-mark"
+                  data-brand-id={brand.id}
                   tabIndex={isDuplicate ? -1 : undefined}
                   aria-hidden={isDuplicate ? 'true' : undefined}
-                  aria-label={isDuplicate ? undefined : `Conhecer ${sponsor.nome}`}
+                  aria-label={isDuplicate ? undefined : `Conhecer ${brand.nome}`}
                 >
-                  <SponsorLogo sponsor={sponsor} />
+                  <BrandLogo brand={brand} />
                 </a>
               )
             })}
@@ -639,8 +639,8 @@ function SponsorMarquee({ className = '' }: { className?: string }) {
   )
 }
 
-function SponsorBand({ id, title }: { id: string; title: string }) {
-  if (activeSponsors.length === 0) return null
+function BrandBand({ id, title }: { id: string; title: string }) {
+  if (activeBrands.length === 0) return null
 
   return (
     <section className="partner-ribbon" aria-labelledby={id}>
@@ -651,18 +651,18 @@ function SponsorBand({ id, title }: { id: string; title: string }) {
             {title}
           </h2>
         </div>
-        <SponsorMarquee className="partner-ribbon-marquee" />
+        <BrandTrack className="partner-ribbon-brands" />
       </div>
     </section>
   )
 }
 
 function PartnerRibbon() {
-  return <SponsorBand id="partner-ribbon-title" title="Nossos patrocinadores" />
+  return <BrandBand id="partner-ribbon-title" title="Nossos patrocinadores" />
 }
 
-function SponsorRail() {
-  return <SponsorBand id="sponsor-title" title="Marcas que navegam com a gente" />
+function BrandRail() {
+  return <BrandBand id="brand-title" title="Marcas que navegam com a gente" />
 }
 function DestinationGallery() {
   const reduceMotion = useReducedMotion()
@@ -1175,7 +1175,7 @@ export default function Home({
       <ServicesSection />
       <NextExpeditionSection />
       <DestinationGallery />
-      <SponsorRail />
+      <BrandRail />
 
       <section className="home-cta" aria-labelledby="cta-title">
         <div className="home-cta-word display" aria-hidden="true">BRASIL</div>
