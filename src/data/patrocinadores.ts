@@ -6,41 +6,41 @@ export interface Patrocinador {
   ativo: boolean
 }
 
-const SPONSOR_ASSET_PATH = '/images/sponsors'
+const BRAND_ASSET_PATH = '/images/marcas'
 
 export const patrocinadores: Patrocinador[] = [
   {
     id: 1,
     nome: 'Casarini',
-    logo: `${SPONSOR_ASSET_PATH}/1.png`,
+    logo: `${BRAND_ASSET_PATH}/1.png`,
     link: '',
     ativo: true,
   },
   {
     id: 2,
     nome: 'BicaJet.com',
-    logo: `${SPONSOR_ASSET_PATH}/2.png`,
+    logo: `${BRAND_ASSET_PATH}/2.png`,
     link: '#',
     ativo: true,
   },
   {
     id: 3,
     nome: 'Pro Life',
-    logo: `${SPONSOR_ASSET_PATH}/3.png`,
+    logo: `${BRAND_ASSET_PATH}/3.png`,
     link: '#',
     ativo: true,
   },
   {
     id: 4,
     nome: 'SAC Seguros Corretora',
-    logo: `${SPONSOR_ASSET_PATH}/4.png`,
+    logo: `${BRAND_ASSET_PATH}/4.png`,
     link: '#',
     ativo: true,
   },
   {
     id: 5,
     nome: 'RSAT Car',
-    logo: `${SPONSOR_ASSET_PATH}/5.png`,
+    logo: `${BRAND_ASSET_PATH}/5.png`,
     link: '#',
     ativo: true,
   },
