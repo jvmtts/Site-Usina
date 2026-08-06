@@ -582,7 +582,9 @@ function SponsorLogo({ sponsor }: { sponsor: Patrocinador }) {
     <img
       src={sponsor.logo}
       alt={sponsor.nome}
-      loading="lazy"
+      loading="eager"
+      decoding="async"
+      draggable={false}
       onError={() => setFailed(true)}
     />
   )
