@@ -1,11 +1,13 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, ChevronRight, X, ArrowUp, Search } from 'lucide-react'
+import { ArrowLeft, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, X, ArrowUp, Search, ZoomIn } from 'lucide-react'
 import { produtos, type Produto } from '@/data/produtos'
 import { motion, AnimatePresence } from 'framer-motion'
 import './Catalog.css'
 
 const CATALOG_BATCH_SIZE = 8
+const CATALOG_SCROLL_KEY = 'catalogScrollY'
+const CATALOG_RESTORE_KEY = 'catalogRestorePending'
 
 const getInitialCatalogLimit = () => {
   const storedLimit = Number.parseInt(sessionStorage.getItem('catalogLimite') || '', 10)
@@ -83,7 +85,8 @@ function CardProduto({ produto }: { produto: Produto }) {
   const categoria = Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria
 
   const handleClick = () => {
-    sessionStorage.setItem('catalogScrollY', window.scrollY.toString())
+    sessionStorage.setItem(CATALOG_SCROLL_KEY, window.scrollY.toString())
+    sessionStorage.setItem(CATALOG_RESTORE_KEY, 'true')
     navigate(`/catalogo/produto/${produto.id}`)
   }
 
@@ -216,13 +219,50 @@ function Vitrine() {
   useEffect(() => { sessionStorage.setItem('catalogLupa', lupaAberta.toString()) }, [lupaAberta])
   useEffect(() => { sessionStorage.setItem('catalogLimite', limite.toString()) }, [limite])
 
-  useLayoutEffect(() => {
-    const saved = sessionStorage.getItem('catalogScrollY')
-    if (saved) {
-      window.scrollTo({ top: parseInt(saved, 10), behavior: 'instant' })
-      sessionStorage.removeItem('catalogScrollY')
-    } else {
-      window.scrollTo({ top: 0, behavior: 'instant' })
+  useEffect(() => {
+    const shouldRestore = sessionStorage.getItem(CATALOG_RESTORE_KEY) === 'true'
+    const savedScrollY = Number.parseInt(sessionStorage.getItem(CATALOG_SCROLL_KEY) || '', 10)
+
+    if (!shouldRestore || !Number.isFinite(savedScrollY)) {
+      sessionStorage.removeItem(CATALOG_SCROLL_KEY)
+      sessionStorage.removeItem(CATALOG_RESTORE_KEY)
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      return
+    }
+
+    let cancelled = false
+    let frameId = 0
+    let timeoutId = 0
+    let attempts = 0
+
+    const restoreScrollPosition = () => {
+      if (cancelled) return
+
+      const maximumScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
+      const targetScroll = Math.min(savedScrollY, maximumScroll)
+      window.scrollTo({ top: targetScroll, left: 0, behavior: 'auto' })
+      attempts += 1
+
+      const pageCanReachSavedPosition = maximumScroll >= savedScrollY - 2
+      const positionWasRestored = Math.abs(window.scrollY - savedScrollY) <= 2
+
+      if ((pageCanReachSavedPosition && positionWasRestored) || attempts >= 12) {
+        sessionStorage.removeItem(CATALOG_SCROLL_KEY)
+        sessionStorage.removeItem(CATALOG_RESTORE_KEY)
+        return
+      }
+
+      timeoutId = window.setTimeout(restoreScrollPosition, 60)
+    }
+
+    frameId = window.requestAnimationFrame(() => {
+      frameId = window.requestAnimationFrame(restoreScrollPosition)
+    })
+
+    return () => {
+      cancelled = true
+      window.cancelAnimationFrame(frameId)
+      window.clearTimeout(timeoutId)
     }
   }, [])
 
@@ -446,6 +486,16 @@ function DetalheProduto() {
   const { id }                        = useParams()
   const navigate                      = useNavigate()
 
+  const voltarParaVitrine = () => {
+    const veioDaVitrine = sessionStorage.getItem(CATALOG_RESTORE_KEY) === 'true'
+    if (veioDaVitrine) {
+      navigate(-1)
+      return
+    }
+
+    navigate('/catalogo')
+  }
+
   useEffect(() => { window.scrollTo(0, 0) }, [id])
 
   const produto = produtos.find((p) => p.id === parseInt(id || '0'))
@@ -510,7 +560,7 @@ function DetalheProduto() {
       <main style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', background: '#F7F7F5' }}>
         <h2 className="display" style={{ fontSize: '2.5rem', color: '#0A0A0A' }}>PRODUTO INDISPONÍVEL</h2>
         <p style={{ color: '#777' }}>Este produto foi removido ou está fora de estoque.</p>
-        <button onClick={() => navigate('/catalogo')} className="btn-outline">Voltar para o catálogo</button>
+        <button onClick={voltarParaVitrine} className="btn-outline">Voltar para o catálogo</button>
       </main>
     )
   }
@@ -538,36 +588,28 @@ function DetalheProduto() {
   const mlLink = produto.linkMercadoLivre || 'https://www.mercadolivre.com.br'
 
   const slideVariants = {
-    enter:  (d: number) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0 }),
+    enter:  (d: number) => ({ x: d > 0 ? 36 : -36, opacity: 0 }),
     center: { x: 0, opacity: 1, zIndex: 1 },
-    exit:   (d: number) => ({ x: d < 0 ? '100%' : '-100%', opacity: 0, zIndex: 0 }),
+    exit:   (d: number) => ({ x: d < 0 ? 36 : -36, opacity: 0, zIndex: 0 }),
   }
 
   return (
     <>
-      <main style={{ background: '#fff', minHeight: '100vh', paddingTop: 'clamp(6rem,10vh,8rem)', paddingBottom: 'clamp(5rem,8vh,7rem)' }}>
+      <main className="catalog-detail-page">
         <div className="wrap">
+          <nav className="catalog-detail-navigation" aria-label="Navegação do produto">
+            <button className="catalog-back-button" onClick={voltarParaVitrine}>
+              <ArrowLeft size={17} aria-hidden="true" />
+              <span>Voltar à vitrine</span>
+            </button>
+            <div className="catalog-breadcrumb" aria-label="Localização atual">
+              <span>Catálogo</span>
+              <span aria-hidden="true">/</span>
+              <span>{Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria}</span>
+            </div>
+          </nav>
 
-          {/* Voltar */}
-          <button
-            onClick={() => navigate('/catalogo')}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#FF7B00', marginBottom: '3rem', padding: 0,
-              transition: 'transform 0.25s',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateX(-4px)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateX(0)' }}
-          >
-            <ArrowLeft size={16} />
-            <span className="mono" style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              Voltar para o catálogo
-            </span>
-          </button>
-
-          {/* Grid principal */}
-          <div className="catalog-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(3rem,6vw,7rem)', alignItems: 'start' }}>
+          <div className="catalog-detail-grid">
 
             {/* Galeria */}
             <motion.div
@@ -575,40 +617,24 @@ function DetalheProduto() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-              style={{ display: 'flex', flexDirection: 'row', gap: '0.75rem' }}
             >
-              {/* Thumbnails */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '72px', flexShrink: 0 }}>
+              <div className="catalog-thumbnail-list" aria-label="Imagens do produto">
                 {imagens.map((src, i) => (
                   <button
                     className={`catalog-thumbnail${i === imgAtiva ? ' is-active' : ''}`}
                     key={i}
                     onMouseEnter={() => mudarImagem(i)}
                     onClick={() => mudarImagem(i)}
-                    style={{
-                      width: '100%', aspectRatio: '1/1',
-                      background: '#F7F7F5',
-                      border: `1.5px solid ${i === imgAtiva ? '#FF7B00' : '#EBEBEB'}`,
-                      cursor: 'pointer', padding: '0.35rem',
-                      transition: 'border-color 0.2s',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
+                    aria-label={`Ver imagem ${i + 1} de ${imagens.length}`}
+                    aria-pressed={i === imgAtiva}
                   >
                     <img src={src} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center' }} />
                   </button>
                 ))}
               </div>
 
-              {/* Imagem principal */}
               <div
                 className="catalog-detail-media"
-                onClick={() => setZoomAberto(true)}
-                style={{
-                  flexGrow: 1, aspectRatio: '1/1',
-                  background: '#F7F7F5', border: '1px solid #EBEBEB',
-                  overflow: 'hidden', position: 'relative',
-                  cursor: 'zoom-in',
-                }}
               >
                 <AnimatePresence initial={false} custom={direction}>
                   <motion.img
@@ -624,6 +650,44 @@ function DetalheProduto() {
                     draggable={false}
                   />
                 </AnimatePresence>
+
+                <button
+                  type="button"
+                  className="catalog-media-zoom-target"
+                  onClick={() => setZoomAberto(true)}
+                  aria-label={`Ampliar imagem de ${produto.nome}`}
+                />
+
+                {imagens.length > 1 && (
+                  <div className="catalog-gallery-controls" aria-label="Navegação da galeria">
+                    <button
+                      type="button"
+                      aria-label="Imagem anterior"
+                      onClick={event => {
+                        event.stopPropagation()
+                        mudarImagem('prev')
+                      }}
+                    >
+                      <ChevronLeft size={18} aria-hidden="true" />
+                    </button>
+                    <span>{imgAtiva + 1} / {imagens.length}</span>
+                    <button
+                      type="button"
+                      aria-label="Próxima imagem"
+                      onClick={event => {
+                        event.stopPropagation()
+                        mudarImagem('next')
+                      }}
+                    >
+                      <ChevronRight size={18} aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
+
+                <span className="catalog-zoom-hint" aria-hidden="true">
+                  <ZoomIn size={15} />
+                  Ampliar
+                </span>
               </div>
             </motion.div>
 
@@ -633,31 +697,30 @@ function DetalheProduto() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.65, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-              style={{ display: 'flex', flexDirection: 'column' }}
             >
-              <span className="eyebrow" style={{ marginBottom: '1rem' }}>
+              <span className="catalog-detail-category">
                 {Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria}
               </span>
 
-              <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 'clamp(1.5rem,2.5vw,2.2rem)', color: '#0A0A0A', lineHeight: 1.15, marginBottom: '1.5rem' }}>
+              <h1 className="catalog-detail-title">
                 {produto.nome}
               </h1>
 
-              <p className="display" style={{ fontSize: 'clamp(2rem,3.5vw,3rem)', color: '#0A0A0A', marginBottom: '2rem' }}>
+              <p className="catalog-detail-price">
                 {formatarPreco(produto.preco)}
               </p>
 
-              {/* Variações */}
               {variacoesExibidas.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem', paddingBottom: '2.5rem', borderBottom: '1px solid #EBEBEB' }}>
+                <div className="catalog-variations">
                   {variacoesExibidas.map(v => {
                     const sel = selecoes[v.nome] || v.opcoes[0]
                     return (
-                      <div key={v.nome}>
-                        <p className="mono" style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#777', marginBottom: '0.75rem' }}>
-                          {v.nome}: <span style={{ color: '#0A0A0A' }}>{sel}</span>
+                      <div className="catalog-variation-group" key={v.nome}>
+                        <p className="catalog-variation-label">
+                          <span>{v.nome}</span>
+                          <strong>{sel}</strong>
                         </p>
-                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <div className="catalog-variation-options">
                           {v.opcoes.map((opcao: string) => {
                             const ativo = sel === opcao
                             return (
@@ -665,14 +728,7 @@ function DetalheProduto() {
                                 className={`catalog-variation-option${ativo ? ' is-active' : ''}`}
                                 key={opcao}
                                 onClick={() => setSelecoes(p => ({ ...p, [v.nome]: opcao }))}
-                                style={{
-                                  padding: '0.5rem 1rem',
-                                  background: ativo ? '#0A0A0A' : '#fff',
-                                  color:      ativo ? '#fff' : '#555',
-                                  border:     ativo ? '1.5px solid #0A0A0A' : '1.5px solid #DEDEDE',
-                                  cursor: 'pointer', transition: 'all 0.2s',
-                                  fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: '0.8rem',
-                                }}
+                                aria-pressed={ativo}
                               >
                                 {opcao}
                               </button>
@@ -685,94 +741,84 @@ function DetalheProduto() {
                 </div>
               )}
 
-              {/* CTAs */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <a
-                  href={waLink} target="_blank" rel="noopener noreferrer"
-                  className="catalog-buy-button catalog-buy-whatsapp"
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    padding: '1rem 2rem', background: '#1DB954',
-                    color: '#fff', textDecoration: 'none',
-                    transition: 'background 0.2s',
-                    position: 'relative',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#17a348' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#1DB954' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <WhatsappIcon />
-                    <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 700, fontSize: '0.9rem' }}>
-                      Comprar pelo WhatsApp
-                    </span>
-                  </div>
-                  <span style={{ fontSize: '0.7rem', opacity: 0.85, marginTop: '0.2rem' }}>
-                    Garante 3% OFF + 5% extra no PIX
-                  </span>
-                  <div style={{
-                    position: 'absolute', top: '-0.75rem', right: '-0.5rem',
-                    background: '#FF7B00', color: '#fff',
-                    padding: '0.25rem 0.6rem',
-                    fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '0.65rem',
-                    letterSpacing: '0.05em', textTransform: 'uppercase',
-                    transform: 'rotate(3deg)',
-                  }}>
-                    🔥 ATÉ 8% OFF
-                  </div>
-                </a>
+              <section className="catalog-purchase-panel" aria-labelledby="catalog-purchase-title">
+                <div className="catalog-purchase-heading">
+                  <span className="catalog-purchase-kicker">Comprar agora</span>
+                  <h2 id="catalog-purchase-title">Escolha onde comprar.</h2>
+                </div>
 
-                <a
-                  href={mlLink} target="_blank" rel="noopener noreferrer"
-                  className="btn-outline catalog-buy-button catalog-buy-marketplace"
-                  style={{ justifyContent: 'center', gap: '0.75rem' }}
-                >
-                  <img
-                    src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small@2x.png"
-                    alt="Mercado Livre"
-                    style={{ height: '1.1rem', width: 'auto', objectFit: 'contain' }}
-                  />
-                  Comprar no Mercado Livre
-                </a>
-              </div>
+                <div className="catalog-purchase-options">
+                  <a
+                    href={waLink} target="_blank" rel="noopener noreferrer"
+                    className="catalog-purchase-card catalog-purchase-card-whatsapp"
+                    aria-label="Comprar pelo WhatsApp com até 8% OFF no PIX"
+                  >
+                    <span className="catalog-purchase-brand catalog-purchase-brand-whatsapp" aria-hidden="true">
+                      <WhatsappIcon />
+                    </span>
+                    <strong>WhatsApp</strong>
+                    <span className="catalog-purchase-offer">
+                      <BadgePercent size={13} aria-hidden="true" />
+                      <span>Até 8% OFF no PIX</span>
+                    </span>
+                    <span className="catalog-purchase-arrow" aria-hidden="true">
+                      <ExternalLink size={17} />
+                    </span>
+                  </a>
+
+                  <a
+                    href={mlLink} target="_blank" rel="noopener noreferrer"
+                    className="catalog-purchase-card catalog-purchase-card-marketplace"
+                    aria-label="Comprar pelo Mercado Livre"
+                  >
+                    <span className="catalog-purchase-brand catalog-purchase-brand-marketplace" aria-hidden="true">
+                      <img
+                        src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small@2x.png"
+                        alt=""
+                      />
+                    </span>
+                    <strong>Mercado Livre</strong>
+                    <span className="catalog-purchase-arrow" aria-hidden="true">
+                      <ExternalLink size={17} />
+                    </span>
+                  </a>
+                </div>
+              </section>
             </motion.div>
           </div>
 
-          {/* Descrição + Ficha */}
-          <motion.div
+          <motion.section
             className="catalog-product-description"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.18 }}
             transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-            style={{ marginTop: 'clamp(4rem,8vh,6rem)', paddingTop: 'clamp(3rem,5vh,4rem)', borderTop: '1px solid #EBEBEB' }}
           >
-            <h3 className="eyebrow" style={{ color: '#FF7B00', marginBottom: '1.5rem', fontSize: '0.75rem' }}>
-              Descrição do Produto
-            </h3>
-            <p style={{ color: '#555', fontSize: '1rem', lineHeight: 1.85, whiteSpace: 'pre-line', maxWidth: '680px', marginBottom: '3rem' }}>
-              {produto.descricao || 'Nenhuma descrição disponível.'}
-            </p>
+            <div className="catalog-product-content-grid">
+              <article className="catalog-content-block">
+                <span className="catalog-content-index">01</span>
+                <h2>Sobre o produto</h2>
+                <p className="catalog-description-copy">
+                  {produto.descricao || 'Nenhuma descrição disponível.'}
+                </p>
+              </article>
 
-            {produto.fichaTecnica && Object.keys(produto.fichaTecnica).length > 0 && (
-              <>
-                <h3 className="eyebrow" style={{ color: '#FF7B00', marginBottom: '1.5rem', fontSize: '0.75rem' }}>
-                  Especificações Técnicas
-                </h3>
-                <div className="catalog-spec-table" style={{ border: '1px solid #EBEBEB', overflow: 'hidden', maxWidth: '680px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
-                      {Object.entries(produto.fichaTecnica).map(([k, v], i) => (
-                        <tr key={k} style={{ background: i % 2 === 0 ? '#fff' : '#F7F7F5', borderBottom: '1px solid #EBEBEB' }}>
-                          <td style={{ padding: '0.875rem 1.25rem', fontWeight: 700, fontSize: '0.85rem', color: '#0A0A0A', width: '35%', borderRight: '1px solid #EBEBEB' }}>{k}</td>
-                          <td style={{ padding: '0.875rem 1.25rem', fontSize: '0.85rem', color: '#555' }}>{v as React.ReactNode}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </motion.div>
+              {produto.fichaTecnica && Object.keys(produto.fichaTecnica).length > 0 && (
+                <article className="catalog-content-block catalog-specifications">
+                  <span className="catalog-content-index">02</span>
+                  <h2>Especificações técnicas</h2>
+                  <dl className="catalog-spec-list">
+                    {Object.entries(produto.fichaTecnica).map(([key, value]) => (
+                      <div key={key}>
+                        <dt>{key}</dt>
+                        <dd>{value as React.ReactNode}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
+              )}
+            </div>
+          </motion.section>
         </div>
       </main>
 
