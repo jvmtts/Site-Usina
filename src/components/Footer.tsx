@@ -71,7 +71,7 @@ export default function Footer() {
               Contato
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {[{ label: 'Brasil', sub: 'Localização' }, { label: '(00) 00000-0000', sub: 'WhatsApp' }].map(({ label, sub }) => (
+              {[{ label: 'Brasil', sub: 'Localização' }, { label: '(11) 96446-7000', sub: 'WhatsApp' }].map(({ label, sub }) => (
                 <div key={sub}>
                   <p className="mono" style={{ fontSize: '0.72rem', letterSpacing: '0.12em',
                     textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)', marginBottom: '0.2rem', fontWeight: 700 }}>{sub}</p>
