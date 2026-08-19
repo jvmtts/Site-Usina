@@ -290,17 +290,31 @@
   letter-spacing: -0.045em;
 }
 
-.exp-stories-heading > p,
-.exp-upcoming-heading > p {
+.exp-section-summary p {
   max-width: 33rem;
   color: #535351;
   font-size: clamp(1rem, 1.35vw, 1.16rem);
   line-height: 1.8;
 }
 
+.exp-section-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.exp-section-logo {
+  display: block;
+  width: clamp(8.5rem, 10vw, 10.75rem);
+  height: auto;
+  margin-bottom: clamp(1.5rem, 2.5vw, 2.25rem);
+  align-self: center;
+  object-fit: contain;
+}
+
 .exp-chapters {
   display: grid;
-  gap: clamp(5.5rem, 10vw, 10rem);
+  gap: clamp(3.25rem, 5vw, 5.5rem);
 }
 
 .exp-chapter {
@@ -316,20 +330,45 @@
   min-height: 0;
   aspect-ratio: auto;
   overflow: hidden;
-  background: #d8d8d3;
+  background: var(--exp-off);
   box-shadow: 0 1.8rem 4.5rem rgba(17, 17, 17, 0.09);
-  will-change: clip-path;
 }
 
 .exp-chapter-media > button {
   position: absolute;
   inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
   overflow: hidden;
   border: 0;
   background: none;
   cursor: pointer;
+}
+
+.exp-chapter-image-frame {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  will-change: clip-path;
+}
+
+.exp-chapter-image-motion {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.exp-chapter-image-shade {
+  position: absolute;
+  z-index: 1;
+  inset: auto 0 0;
+  height: 35%;
+  background: linear-gradient(180deg, transparent, rgba(5, 5, 5, 0.48));
+  pointer-events: none;
 }
 
 .exp-chapter-media img {
@@ -345,18 +384,9 @@
   filter: saturate(1.04);
 }
 
-.exp-chapter-media::after {
-  position: absolute;
-  inset: auto 0 0;
-  height: 35%;
-  background: linear-gradient(180deg, transparent, rgba(5, 5, 5, 0.48));
-  content: '';
-  pointer-events: none;
-}
-
 .exp-chapter-media-action {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   right: 1.5rem;
   bottom: 1.5rem;
   display: inline-flex;
@@ -370,6 +400,7 @@
   font-weight: 650;
   backdrop-filter: blur(10px);
   transition: background 180ms ease, border-color 180ms ease;
+  will-change: opacity, transform;
 }
 
 .exp-chapter-media > button:hover .exp-chapter-media-action,
@@ -760,7 +791,7 @@
 .exp-dialog-close {
   position: absolute;
   top: 1.7rem;
-  left: 1.7rem;
+  right: 1.7rem;
   display: grid;
   width: 2.8rem;
   height: 2.8rem;
@@ -771,6 +802,10 @@
   color: #fff;
   cursor: pointer;
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.exp-dialog-copy > .exp-kicker {
+  max-width: calc(100% - 4rem);
 }
 
 .exp-dialog-close:hover,
@@ -997,8 +1032,7 @@
     gap: 2rem;
   }
 
-  .exp-stories-heading > p,
-  .exp-upcoming-heading > p {
+  .exp-section-summary p {
     max-width: 42rem;
   }
 
@@ -1162,8 +1196,13 @@
     font-size: clamp(2.6rem, 12vw, 4rem);
   }
 
+  .exp-section-logo {
+    width: 7.25rem;
+    margin-bottom: 1.35rem;
+  }
+
   .exp-chapters {
-    gap: 4rem;
+    gap: 3rem;
   }
 
   .exp-chapter-media {
@@ -1260,7 +1299,7 @@
 
   .exp-dialog-close {
     top: 1rem;
-    left: 1rem;
+    right: 1rem;
   }
 
   .exp-dialog-gallery {

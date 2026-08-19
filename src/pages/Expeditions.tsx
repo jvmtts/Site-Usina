@@ -6,7 +6,15 @@ import {
   type ReactNode,
 } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion, useInView, useReducedMotion } from 'framer-motion'
+import {
+  AnimatePresence,
+  motion,
+  useInView,
+  useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
+} from 'framer-motion'
 import {
   ArrowDown,
   ArrowRight,
@@ -22,6 +30,7 @@ import './Expeditions.css'
 
 interface Expedition {
   id: string
+  sequenceLabel: string
   destination: string
   shortDestination: string
   state: string
@@ -65,6 +74,7 @@ const UPCOMING_EXPEDITION = {
 const EXPEDITIONS: Expedition[] = [
   {
     id: 'angra-paraty',
+    sequenceLabel: 'Primeira expedição',
     destination: 'Angra dos Reis × Paraty',
     shortDestination: 'Angra × Paraty',
     state: 'Rio de Janeiro',
@@ -87,10 +97,11 @@ const EXPEDITIONS: Expedition[] = [
   },
   {
     id: 'capitolio-2025',
+    sequenceLabel: 'Segunda expedição',
     destination: 'Capitólio',
     shortDestination: 'Capitólio',
     state: 'Minas Gerais',
-    dateLabel: 'Ago 2025',
+    dateLabel: '2026',
     duration: '8 dias · 7 noites',
     spots: 20,
     description:
@@ -110,6 +121,7 @@ const EXPEDITIONS: Expedition[] = [
   },
   {
     id: 'sao-sebastiao-ilhabela',
+    sequenceLabel: 'Terceira expedição',
     destination: 'São Sebastião × Ilhabela',
     shortDestination: 'São Sebastião',
     state: 'São Paulo',
@@ -402,36 +414,61 @@ function ExpeditionChapter({
   onOpen: (expedition: Expedition) => void
 }) {
   const mediaRef = useRef<HTMLDivElement>(null)
-  const inView = useInView(mediaRef, { once: true, margin: '-12% 0px' })
   const reduceMotion = useReducedMotion()
+  const { scrollYProgress } = useScroll({
+    target: mediaRef,
+    offset: ['start 94%', 'start 58%'],
+  })
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 180,
+    damping: 26,
+    mass: 0.42,
+    restDelta: 0.001,
+  })
+  const clipPath = useTransform(
+    smoothProgress,
+    [0, 1],
+    ['inset(12% 7% 12% 7%)', 'inset(0% 0% 0% 0%)'],
+  )
+  const imageScale = useTransform(smoothProgress, [0, 1], [1.065, 1])
+  const actionOpacity = useTransform(smoothProgress, [0.52, 0.78], [0, 1])
+  const actionY = useTransform(smoothProgress, [0.52, 0.78], [8, 0])
 
   return (
     <article className="exp-chapter" aria-label={`Expedição ${expedition.destination}`}>
-      <motion.div
-        ref={mediaRef}
-        className="exp-chapter-media"
-        initial={reduceMotion ? false : { clipPath: 'inset(0 0 100% 0)' }}
-        animate={inView ? { clipPath: 'inset(0 0 0% 0)' } : undefined}
-        transition={{ duration: reduceMotion ? 0 : 1.05, ease: [0.76, 0, 0.24, 1] }}
-      >
+      <div ref={mediaRef} className="exp-chapter-media">
         <button
           type="button"
           onClick={() => onOpen(expedition)}
           aria-label={`Conhecer a expedição ${expedition.destination}`}
         >
-          <motion.img
-            src={expedition.coverImage}
-            alt={`Participantes da expedição ${expedition.destination}`}
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-          />
-          <span className="exp-chapter-media-action">
+          <motion.span
+            className="exp-chapter-image-frame"
+            style={reduceMotion ? undefined : { clipPath }}
+          >
+            <motion.span
+              className="exp-chapter-image-motion"
+              style={reduceMotion ? undefined : { scale: imageScale }}
+            >
+              <img
+                src={expedition.coverImage}
+                alt={`Participantes da expedição ${expedition.destination}`}
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+              />
+            </motion.span>
+            <span className="exp-chapter-image-shade" aria-hidden="true" />
+          </motion.span>
+          <motion.span
+            className="exp-chapter-media-action"
+            style={reduceMotion ? undefined : { opacity: actionOpacity, y: actionY }}
+          >
             <Images size={18} aria-hidden="true" />
             Abrir história
-          </span>
+          </motion.span>
         </button>
-      </motion.div>
+      </div>
     </article>
   )
 }
@@ -445,10 +482,18 @@ function ExpeditionStories({ onOpen }: { onOpen: (expedition: Expedition) => voi
             <span className="mono exp-kicker">Expedições realizadas</span>
             <h2 id="stories-heading" className="display">Cada destino deixou uma história.</h2>
           </div>
-          <p>
-            Três trajetos, diferentes paisagens e o mesmo cuidado em cada quilômetro.
-            Abra uma rota para ver o relato e as fotografias da viagem.
-          </p>
+          <div className="exp-section-summary">
+            <img
+              className="exp-section-logo"
+              src="/images/Usina-logo-Preto.png"
+              alt=""
+              aria-hidden="true"
+            />
+            <p>
+              Três trajetos, diferentes paisagens e o mesmo cuidado em cada quilômetro.
+              Abra uma rota para ver o relato e as fotografias da viagem.
+            </p>
+          </div>
         </Reveal>
 
         <div className="exp-chapters">
@@ -527,10 +572,18 @@ function UpcomingExpedition() {
             <span className="mono exp-kicker">Próxima partida</span>
             <h2 id="upcoming-heading" className="display">A próxima história já tem destino.</h2>
           </div>
-          <p>
-            Campos do Jordão ganha sua própria experiência. Veja o essencial por aqui ou
-            abra a página da expedição para conhecer o roteiro completo.
-          </p>
+          <div className="exp-section-summary">
+            <img
+              className="exp-section-logo"
+              src="/images/Usina-logo-Preto.png"
+              alt=""
+              aria-hidden="true"
+            />
+            <p>
+              Campos do Jordão ganha sua própria experiência. Veja o essencial por aqui ou
+              abra a página da expedição para conhecer o roteiro completo.
+            </p>
+          </div>
         </Reveal>
 
         <Reveal className="exp-upcoming-card" delay={0.08}>
@@ -617,12 +670,27 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
   const [imageIndex, setImageIndex] = useState(0)
   const dialogRef = useRef<HTMLDivElement>(null)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const previousBodyOverflowRef = useRef('')
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  const scrollLockReleasedRef = useRef(false)
   const reduceMotion = useReducedMotion()
   const images = expedition.galleryImages
 
   const navigate = useCallback((direction: number) => {
     setImageIndex((current) => (current + direction + images.length) % images.length)
   }, [images.length])
+
+  const releaseScrollLock = useCallback(() => {
+    if (scrollLockReleasedRef.current) return
+
+    document.body.style.overflow = previousBodyOverflowRef.current
+    scrollLockReleasedRef.current = true
+  }, [])
+
+  const requestClose = useCallback(() => {
+    releaseScrollLock()
+    onClose()
+  }, [onClose, releaseScrollLock])
 
   useEffect(() => {
     const neighbors = [
@@ -636,13 +704,14 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
   }, [imageIndex, images])
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow
-    const previouslyFocused = document.activeElement as HTMLElement | null
+    previousBodyOverflowRef.current = document.body.style.overflow
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+    scrollLockReleasedRef.current = false
     document.body.style.overflow = 'hidden'
     closeButtonRef.current?.focus()
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') requestClose()
       if (event.key === 'ArrowLeft') navigate(-1)
       if (event.key === 'ArrowRight') navigate(1)
 
@@ -668,11 +737,11 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
 
     window.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.body.style.overflow = previousOverflow
+      releaseScrollLock()
       window.removeEventListener('keydown', handleKeyDown)
-      previouslyFocused?.focus()
+      previouslyFocusedRef.current?.focus({ preventScroll: true })
     }
-  }, [navigate, onClose])
+  }, [navigate, releaseScrollLock, requestClose])
 
   return (
     <motion.div
@@ -692,10 +761,12 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: reduceMotion ? 0 : 0.58, delay: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
       >
-        <button ref={closeButtonRef} type="button" className="exp-dialog-close" onClick={onClose} aria-label="Fechar expedição">
+        <button ref={closeButtonRef} type="button" className="exp-dialog-close" onClick={requestClose} aria-label="Fechar expedição">
           <X size={21} aria-hidden="true" />
         </button>
-        <span className="mono exp-kicker exp-kicker-light">Diário de bordo · {expedition.dateLabel}</span>
+        <span className="mono exp-kicker exp-kicker-light">
+          {expedition.sequenceLabel} · {expedition.dateLabel}
+        </span>
         <h2 id="exp-dialog-title" className="display">{expedition.destination}</h2>
         <p>{expedition.description}</p>
         <dl>

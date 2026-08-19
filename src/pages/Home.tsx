@@ -8,6 +8,7 @@ import {
 } from 'react'
 import {
   AnimatePresence,
+  LayoutGroup,
   motion,
   useInView,
   useReducedMotion,
@@ -22,7 +23,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageOff,
-  Plus,
   X,
 } from 'lucide-react'
 import { patrocinadores, type Patrocinador } from '../data/patrocinadores'
@@ -56,7 +56,7 @@ const destinations = [
 const services = [
   {
     number: '01',
-    title: 'Expedições náuticas',
+    title: 'Expedições Náuticas',
     description: 'Roteiros acompanhados, estrutura de apoio e grupos reunidos para conhecer o Brasil por uma perspectiva diferente.',
     story: 'No fim, não é só sobre o trajeto. É sobre quem estava ali e o que cada pessoa leva de volta.',
     image: '/images/image1.png',
@@ -69,7 +69,7 @@ const services = [
   },
   {
     number: '02',
-    title: 'Catálogo selecionado',
+    title: 'Corridas de Jet',
     description: 'Uma seleção para quem quer entrar na água, renovar o equipamento ou encontrar a próxima oportunidade no universo do jet.',
     story: 'Escolher bem também faz parte da experiência de quem já vive esse universo ou quer começar a vivê-lo.',
     image: '/images/image5.png',
@@ -82,7 +82,7 @@ const services = [
   },
   {
     number: '03',
-    title: 'Projetos e parcerias',
+    title: 'Off-Road',
     description: 'Experiências e colaborações construídas com marcas e pessoas que compartilham a mesma paixão pelo mundo náutico.',
     story: 'As melhores ideias ganham força quando são construídas com gente que acredita na mesma história.',
     image: '/images/image4.png',
@@ -321,60 +321,29 @@ function ManifestoSection() {
 }
 
 function ServicesSection() {
-  const mapRef = useRef<HTMLDivElement | null>(null)
-  const storyRef = useRef<HTMLElement | null>(null)
-  const mapHasEntered = useInView(mapRef, {
+  const portalRef = useRef<HTMLDivElement | null>(null)
+  const portalHasEntered = useInView(portalRef, {
     once: true,
     margin: '-12% 0px -12% 0px',
   })
-  const mapIsVisible = useInView(mapRef, {
-    margin: '-30% 0px -30% 0px',
-  })
   const reduceMotion = useReducedMotion()
-  const [activeService, setActiveService] = useState(0)
+  const hasOpenedServiceRef = useRef(false)
+  const [activeService, setActiveService] = useState<number | null>(null)
   const [openedService, setOpenedService] = useState<number | null>(null)
-  const [isMapInteracting, setIsMapInteracting] = useState(false)
 
   const routePaths = [
-    'M 539 322 C 470 283, 398 239, 310 199',
-    'M 661 322 C 732 282, 804 240, 890 203',
-    'M 539 398 C 470 441, 398 489, 312 538',
-    'M 661 398 C 733 441, 806 489, 888 538',
-  ]
-  const nodeEntrance = [
-    { x: -28, y: -18, rotate: -1.2 },
-    { x: 28, y: -16, rotate: 1.1 },
-    { x: -24, y: 20, rotate: -0.9 },
-    { x: 24, y: 18, rotate: 0.8 },
+    'M 495 300 C 420 255, 325 190, 190 150',
+    'M 705 300 C 790 250, 910 190, 1040 155',
+    'M 495 440 C 420 480, 325 540, 205 590',
+    'M 705 440 C 790 480, 900 540, 1005 585',
   ]
   const selectedService = openedService === null ? null : services[openedService]
+  const skipPortalIntro = Boolean(reduceMotion || hasOpenedServiceRef.current)
 
-  useEffect(() => {
-    if (openedService === null) return
-
-    const frame = window.requestAnimationFrame(() => {
-      storyRef.current?.scrollIntoView({
-        behavior: reduceMotion ? 'auto' : 'smooth',
-        block: 'start',
-      })
-    })
-
-    return () => window.cancelAnimationFrame(frame)
-  }, [openedService, reduceMotion])
-
-  useEffect(() => {
-    if (!mapIsVisible || reduceMotion || isMapInteracting || openedService !== null) return
-
-    const interval = window.setInterval(() => {
-      setActiveService((current) => (current + 1) % services.length)
-    }, 5200)
-
-    return () => window.clearInterval(interval)
-  }, [isMapInteracting, mapIsVisible, openedService, reduceMotion])
-
-  const toggleService = (index: number) => {
+  const openService = (index: number) => {
+    hasOpenedServiceRef.current = true
     setActiveService(index)
-    setOpenedService((current) => current === index ? null : index)
+    setOpenedService(index)
   }
 
   return (
@@ -397,179 +366,241 @@ function ServicesSection() {
         </Reveal>
       </div>
 
-      <div
-        ref={mapRef}
-        className="wrap services-map"
-        onMouseEnter={() => setIsMapInteracting(true)}
-        onMouseLeave={() => setIsMapInteracting(false)}
-        onFocusCapture={() => setIsMapInteracting(true)}
-        onBlurCapture={() => setIsMapInteracting(false)}
-      >
-        <svg
-          className="service-routes"
-          viewBox="0 0 1200 720"
-          preserveAspectRatio="xMidYMid meet"
-          aria-hidden="true"
+      <LayoutGroup id="services-portal">
+        <div
+          ref={portalRef}
+          className={`services-portal-stage${selectedService ? ' is-detail-open' : ''}`}
         >
-          {routePaths.map((path, index) => (
-            <motion.path
-              key={path}
-              className={activeService === index ? 'service-route is-active' : 'service-route'}
-              d={path}
-              initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
-              animate={mapHasEntered ? { pathLength: 1, opacity: 1 } : undefined}
-              transition={{
-                duration: reduceMotion ? 0 : 1.35,
-                delay: reduceMotion ? 0 : 0.48 + index * 0.12,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-            />
-          ))}
-        </svg>
-
-        <motion.div
-          className="service-mark"
-          initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.88, rotate: -2 }}
-          animate={mapHasEntered ? { opacity: 1, y: 0, scale: 1, rotate: 0 } : undefined}
-          transition={{ duration: reduceMotion ? 0 : 1.05, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <span className="service-mark-logo">
-            <img src="/images/Usina-logo-Preto.png" alt="Usina do Jet" />
-          </span>
-        </motion.div>
-
-        <ol className="service-nodes">
-          {services.map((service, index) => {
-            const isActive = activeService === index
-            const isOpen = openedService === index
-
-            return (
-              <motion.li
-                key={service.number}
-                className={`service-node service-node-${index}${isActive ? ' is-active' : ''}`}
-                initial={reduceMotion ? false : {
-                  opacity: 0,
-                  x: nodeEntrance[index].x,
-                  y: nodeEntrance[index].y,
-                  rotate: nodeEntrance[index].rotate,
-                }}
-                whileInView={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
-                viewport={{ once: true, amount: 0.18 }}
-                transition={{
-                  duration: reduceMotion ? 0 : 1.02,
-                  delay: reduceMotion ? 0 : 0.28 + (index % 2) * 0.1,
-                  ease: [0.16, 1, 0.3, 1],
-                }}
-                onMouseEnter={() => setActiveService(index)}
+          <AnimatePresence initial={!reduceMotion} mode="sync">
+            {!selectedService && (
+              <motion.div
+                key="services-orbit"
+                className={`services-portal-orbit${activeService !== null ? ' has-active-node' : ''}`}
+                initial={skipPortalIntro ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.985 }}
+                transition={{ duration: reduceMotion ? 0 : 0.55 }}
               >
-                <button
-                  type="button"
-                  className="service-node-link"
-                  aria-expanded={isOpen}
-                  aria-controls={isOpen ? 'service-story-panel' : undefined}
-                  onFocus={() => setActiveService(index)}
-                  onPointerDown={() => setActiveService(index)}
-                  onClick={() => toggleService(index)}
+                <svg
+                  className="services-portal-routes"
+                  viewBox="0 0 1200 740"
+                  preserveAspectRatio="xMidYMid meet"
+                  aria-hidden="true"
                 >
-                  <motion.span
-                    className="service-node-media"
-                    initial={reduceMotion ? false : {
-                      clipPath: 'inset(12% 12% 12% 12% round 46%)',
-                      scale: 0.94,
-                    }}
-                    whileInView={{
-                      clipPath: 'inset(0% 0% 0% 0% round 0%)',
-                      scale: 1,
-                    }}
-                    viewport={{ once: true, amount: 0.18 }}
-                    transition={{
-                      duration: reduceMotion ? 0 : 1.15,
-                      delay: reduceMotion ? 0 : 0.36 + (index % 2) * 0.1,
-                      ease: [0.16, 1, 0.3, 1],
-                    }}
-                  >
-                    <SmartImage src={service.image} alt={service.imageAlt} />
-                    <span className="service-node-shade" aria-hidden="true" />
-                    <span className="mono service-node-number">{service.number}</span>
-                  </motion.span>
-                  <span className="service-node-copy">
-                    <strong>{service.title}</strong>
-                    <span className="service-node-action">
-                      {isOpen ? 'Fechar história' : 'Abrir história'}
-                      <Plus className={isOpen ? 'is-open' : ''} aria-hidden="true" size={17} />
-                    </span>
-                  </span>
-                </button>
-              </motion.li>
-            )
-          })}
-        </ol>
-      </div>
+                  {routePaths.map((path) => (
+                    <path
+                      key={`base-route-${path}`}
+                      className={`services-portal-route-base${portalHasEntered ? ' is-visible' : ''}`}
+                      d={path}
+                    />
+                  ))}
+                  {!skipPortalIntro && routePaths.map((path, index) => (
+                    <motion.path
+                      key={`intro-route-${path}`}
+                      className={`services-portal-intro-route${portalHasEntered ? ' is-running' : ''}`}
+                      d={path}
+                      style={{ animationDelay: `${0.7 + index * 0.06}s` }}
+                      initial={{ pathLength: 0 }}
+                      animate={portalHasEntered ? {
+                        pathLength: [0, 1, 1],
+                      } : undefined}
+                      transition={{
+                        duration: 0.72,
+                        delay: 0.7 + index * 0.06,
+                        ease: [0.16, 1, 0.3, 1],
+                        times: [0, 0.64, 1],
+                      }}
+                    />
+                  ))}
+                  <AnimatePresence>
+                    {activeService !== null && (
+                      <motion.path
+                        key={routePaths[activeService]}
+                        className="services-portal-active-route"
+                        d={routePaths[activeService]}
+                        initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        exit={reduceMotion ? undefined : { opacity: 0 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.72, ease: [0.16, 1, 0.3, 1] }}
+                      />
+                    )}
+                  </AnimatePresence>
+                </svg>
 
-      <div className="wrap service-story-region">
-        <AnimatePresence initial={false} mode="wait">
-          {selectedService && (
-            <motion.article
-              ref={storyRef}
-              key={selectedService.number}
-              id="service-story-panel"
-              className="service-story"
-              aria-labelledby={`service-story-title-${selectedService.number}`}
-              initial={reduceMotion ? false : { opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? undefined : { opacity: 0, y: 18 }}
-              transition={{ duration: reduceMotion ? 0 : 0.62, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <header className="service-story-header">
-                <span className="mono">Caderno da Usina · {selectedService.number}</span>
-                <button
-                  type="button"
-                  className="service-story-close"
-                  onClick={() => setOpenedService(null)}
-                  aria-label={`Fechar detalhes de ${selectedService.title}`}
+                <motion.div
+                  className="services-portal-mark"
+                  initial={skipPortalIntro ? false : {
+                    opacity: 0,
+                    y: 18,
+                    scale: 0.9,
+                    filter: 'blur(10px)',
+                  }}
+                  animate={portalHasEntered ? {
+                    opacity: 1,
+                    y: 0,
+                    scale: 1,
+                    filter: 'blur(0px)',
+                  } : undefined}
+                  transition={{
+                    duration: reduceMotion ? 0 : 0.82,
+                    delay: reduceMotion ? 0 : 0.08,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
                 >
-                  <X aria-hidden="true" size={19} />
-                </button>
-              </header>
+                  <img src="/images/Usina-logo-Preto.png" alt="Usina do Jet" />
+                </motion.div>
 
-              <div className="service-story-layout">
-                <div className="service-story-copy">
-                  <span className="eyebrow">Por dentro da Usina</span>
-                  <h3
-                    id={`service-story-title-${selectedService.number}`}
-                    className="display"
-                  >
+                <ol className="services-portal-nodes">
+                  {services.map((service, index) => {
+                    const isActive = activeService === index
+
+                    return (
+                      <motion.li
+                        key={service.number}
+                        className={`services-portal-node services-portal-node-${index}${isActive ? ' is-active' : ''}`}
+                        initial={skipPortalIntro ? false : {
+                          opacity: 0,
+                          scale: 0.82,
+                          x: index % 2 === 0 ? -58 : 58,
+                          y: index < 2 ? -38 : 38,
+                          filter: 'blur(7px)',
+                        }}
+                        animate={portalHasEntered ? {
+                          opacity: 1,
+                          scale: 1,
+                          x: 0,
+                          y: 0,
+                          filter: 'blur(0px)',
+                        } : undefined}
+                        transition={{
+                          duration: reduceMotion ? 0 : 0.78,
+                          delay: reduceMotion ? 0 : 0.42 + index * 0.1,
+                          ease: [0.16, 1, 0.3, 1],
+                        }}
+                      >
+                        <button
+                          type="button"
+                          className="services-portal-node-button"
+                          aria-label={`Conhecer ${service.title}`}
+                          onMouseEnter={() => setActiveService(index)}
+                          onMouseLeave={() => setActiveService(null)}
+                          onFocus={() => setActiveService(index)}
+                          onBlur={() => setActiveService(null)}
+                          onClick={() => openService(index)}
+                        >
+                          <motion.span
+                            layoutId={`service-portal-media-${service.number}`}
+                            className="services-portal-node-media"
+                            transition={{ duration: reduceMotion ? 0 : 0.72, ease: [0.16, 1, 0.3, 1] }}
+                          >
+                            <SmartImage src={service.image} alt={service.imageAlt} />
+                            <span className="services-portal-node-shade" aria-hidden="true" />
+                            <span className="mono services-portal-node-number">{service.number}</span>
+                          </motion.span>
+                          <span className="services-portal-node-caption">
+                            <motion.span
+                              className="services-portal-node-caption-inner"
+                              initial={skipPortalIntro ? false : { opacity: 0, y: 10 }}
+                              animate={portalHasEntered ? { opacity: 1, y: 0 } : undefined}
+                              transition={{
+                                duration: reduceMotion ? 0 : 0.45,
+                                delay: reduceMotion ? 0 : 0.82 + index * 0.1,
+                                ease: [0.16, 1, 0.3, 1],
+                              }}
+                            >
+                              <strong>{service.title}</strong>
+                              <ArrowUpRight aria-hidden="true" size={16} />
+                            </motion.span>
+                          </span>
+                        </button>
+                      </motion.li>
+                    )
+                  })}
+                </ol>
+              </motion.div>
+            )}
+            {selectedService && (
+              <motion.article
+                key={`services-detail-${selectedService.number}`}
+                className="services-portal-detail"
+                aria-labelledby={`services-portal-title-${selectedService.number}`}
+                aria-live="polite"
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.48 }}
+              >
+                <motion.figure
+                  layoutId={`service-portal-media-${selectedService.number}`}
+                  className="services-portal-detail-media"
+                  transition={{ duration: reduceMotion ? 0 : 0.76, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <SmartImage src={selectedService.gallery[0].src} alt={selectedService.gallery[0].alt} />
+                  <span className="services-portal-detail-shade" aria-hidden="true" />
+                  <figcaption className="mono">Arquivo Usina / {selectedService.number}</figcaption>
+                </motion.figure>
+
+                <motion.div
+                  className="services-portal-detail-copy"
+                  initial={reduceMotion ? false : { opacity: 0, x: 28 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.68, delay: reduceMotion ? 0 : 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <header className="services-portal-detail-header">
+                    <span className="mono">Por dentro da Usina</span>
+                    <button
+                      type="button"
+                      className="services-portal-close"
+                      onClick={() => {
+                        setOpenedService(null)
+                        setActiveService(null)
+                      }}
+                      aria-label={`Fechar detalhes de ${selectedService.title}`}
+                    >
+                      <X aria-hidden="true" size={19} />
+                    </button>
+                  </header>
+
+                  <span className="mono services-portal-detail-index">{selectedService.number}</span>
+                  <h3 id={`services-portal-title-${selectedService.number}`} className="display">
                     {selectedService.title}
                   </h3>
                   <p>{selectedService.description}</p>
                   <blockquote>{selectedService.story}</blockquote>
-                </div>
 
-                <div className="service-story-gallery">
-                  {selectedService.gallery.map((image, index) => (
-                    <motion.figure
-                      key={`${selectedService.number}-${image.src}-${index}`}
-                      className={`service-story-photo service-story-photo-${index}`}
-                      initial={reduceMotion ? false : { opacity: 0.68, scale: 0.985 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{
-                        duration: reduceMotion ? 0 : 0.72,
-                        delay: reduceMotion ? 0 : 0.12 + index * 0.09,
-                        ease: [0.16, 1, 0.3, 1],
-                      }}
-                    >
-                      <SmartImage src={image.src} alt={image.alt} />
-                      <figcaption className="mono">
-                        Arquivo Usina · {String(index + 1).padStart(2, '0')}
-                      </figcaption>
-                    </motion.figure>
-                  ))}
-                </div>
-              </div>
-            </motion.article>
-          )}
-        </AnimatePresence>
-      </div>
+                  <div className="services-portal-detail-thumbs" aria-label="Mais registros">
+                    {selectedService.gallery.slice(1).map((image, index) => (
+                      <motion.figure
+                        key={`${selectedService.number}-${image.src}-${index}`}
+                        initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.55, delay: reduceMotion ? 0 : 0.36 + index * 0.08 }}
+                      >
+                        <SmartImage src={image.src} alt={image.alt} />
+                      </motion.figure>
+                    ))}
+                  </div>
+
+                  <nav className="services-portal-detail-nav" aria-label="Outros caminhos da Usina">
+                    {services.map((service, index) => (
+                      <button
+                        key={service.number}
+                        type="button"
+                        className={openedService === index ? 'is-current' : ''}
+                        onClick={() => openService(index)}
+                        aria-label={`Abrir ${service.title}`}
+                        aria-current={openedService === index ? 'true' : undefined}
+                      >
+                        <span className="mono">{service.number}</span>
+                      </button>
+                    ))}
+                  </nav>
+                </motion.div>
+              </motion.article>
+            )}
+          </AnimatePresence>
+        </div>
+      </LayoutGroup>
     </section>
   )
 }
