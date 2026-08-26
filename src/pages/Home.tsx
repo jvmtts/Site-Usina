@@ -8,7 +8,6 @@ import {
 } from 'react'
 import {
   AnimatePresence,
-  LayoutGroup,
   motion,
   useInView,
   useReducedMotion,
@@ -26,10 +25,12 @@ import {
   X,
 } from 'lucide-react'
 import { patrocinadores, type Patrocinador } from '../data/patrocinadores'
+import { produtos, type Produto } from '../data/produtos'
 import BrandIntro from '../components/BrandIntro'
 import HeroMedia from '../components/HeroMedia'
 
 const EXPEDITION_PATH = '/expedicoes/campos-do-jordao-2026'
+const DESTINATION_AUTOPLAY_DURATION = 10_000
 const activeBrands = patrocinadores.filter((brand) => brand.ativo)
 
 const destinations = [
@@ -53,60 +54,183 @@ const destinations = [
   },
 ]
 
-const services = [
+interface ServiceImage {
+  src: string
+  alt: string
+}
+
+interface ServiceDefinition {
+  number: string
+  title: string
+  circleTitle: string
+  eyebrow: string
+  description: string
+  story: string
+  details: string[]
+  image: string
+  imageAlt: string
+  gallery: ServiceImage[]
+  kind?: 'editorial' | 'products'
+}
+
+const angraGallery: ServiceImage[] = [
+  { src: '/images/Angra/CAPA%20ANGRA.webp', alt: 'Expedição da Usina do Jet em Angra dos Reis' },
+  { src: '/images/Angra/FOTO%202.webp', alt: 'Jet skis durante o percurso em Angra dos Reis' },
+  { src: '/images/Angra/FOTO%203.webp', alt: 'Participantes reunidos durante a expedição' },
+  { src: '/images/Angra/FOTO%204.webp', alt: 'Paisagem registrada durante a expedição em Angra' },
+  { src: '/images/Angra/FOTO%205.webp', alt: 'Momento do grupo durante o trajeto náutico' },
+  { src: '/images/Angra/FOTO%206.webp', alt: 'Registro da experiência da Usina do Jet em Angra' },
+]
+
+const capitolioGallery: ServiceImage[] = [
+  { src: '/images/Capitolio/capa.webp', alt: 'Experiência da Usina do Jet em Capitólio' },
+  { src: '/images/Capitolio/FOTO%201.webp', alt: 'Jet skis navegando em Capitólio' },
+  { src: '/images/Capitolio/FOTO%202.webp', alt: 'Participantes durante o roteiro em Capitólio' },
+  { src: '/images/Capitolio/FOTO%203.webp', alt: 'Paisagem do percurso em Capitólio' },
+  { src: '/images/Capitolio/FOTO%204.webp', alt: 'Momento vivido durante a viagem' },
+  { src: '/images/Capitolio/FOTO%205.webp', alt: 'Registro da comunidade Usina do Jet' },
+]
+
+const saoSebastiaoGallery: ServiceImage[] = [
+  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/SAO%20SEBAS%20X%20ILHABELA%20FOTOS%20SITE.webp', alt: 'Travessia da Usina do Jet entre São Sebastião e Ilhabela' },
+  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%201.webp', alt: 'Participantes na travessia de São Sebastião' },
+  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%202.webp', alt: 'Jet skis durante a experiência no litoral paulista' },
+  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%203.webp', alt: 'Registro da rota entre mar e ilha' },
+  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%204.webp', alt: 'Momento da expedição no litoral' },
+  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%205.webp', alt: 'Comunidade reunida durante o percurso' },
+]
+
+const camposGallery: ServiceImage[] = [
+  { src: '/images/Expedi%C3%A7%C3%A3o4.jpeg', alt: 'Experiência da Usina do Jet em Campos do Jordão' },
+  { src: '/images/Formulario/Carrosel/imagem1.jpeg', alt: 'Registro de uma experiência da Usina do Jet' },
+  { src: '/images/Formulario/Carrosel/imagem2.jpeg', alt: 'Participantes reunidos durante um evento' },
+  { src: '/images/Formulario/Carrosel/imagem3.jpeg', alt: 'Momento vivido durante a experiência' },
+  { src: '/images/Formulario/Carrosel/imagem4.jpeg', alt: 'Paisagem do roteiro da Usina do Jet' },
+  { src: '/images/Formulario/Carrosel/imagem5.jpeg', alt: 'Registro da comunidade Usina do Jet' },
+]
+
+const services: ServiceDefinition[] = [
   {
     number: '01',
-    title: 'Expedições Náuticas',
+    title: 'Expedições náuticas',
+    circleTitle: 'Expedições náuticas',
+    eyebrow: 'Rotas que viram histórias',
     description: 'Roteiros acompanhados, estrutura de apoio e grupos reunidos para conhecer o Brasil por uma perspectiva diferente.',
     story: 'No fim, não é só sobre o trajeto. É sobre quem estava ali e o que cada pessoa leva de volta.',
+    details: [
+      'Cada saída é pensada com antecedência, respeitando o ritmo do grupo, as condições do percurso e tudo o que torna a viagem mais segura e gostosa de viver.',
+      'Entre uma parada e outra, o destino deixa de ser apenas cenário. É ali que surgem os encontros, as descobertas e as histórias que continuam depois da água.',
+    ],
     image: '/images/image1.png',
     imageAlt: 'Expedição náutica da Usina do Jet',
-    gallery: [
-      { src: '/images/image1.png', alt: 'Registro de uma expedição náutica da Usina do Jet' },
-      { src: '/images/image2.png', alt: 'Participantes durante uma experiência da Usina do Jet' },
-      { src: '/images/image3.png', alt: 'Momento vivido durante uma expedição da Usina do Jet' },
-    ],
+    gallery: angraGallery,
   },
   {
     number: '02',
-    title: 'Corridas de Jet',
-    description: 'Uma seleção para quem quer entrar na água, renovar o equipamento ou encontrar a próxima oportunidade no universo do jet.',
-    story: 'Escolher bem também faz parte da experiência de quem já vive esse universo ou quer começar a vivê-lo.',
-    image: '/images/image5.png',
-    imageAlt: 'Jet ski selecionado para o catálogo da Usina do Jet',
-    gallery: [
-      { src: '/images/image5.png', alt: 'Seleção do catálogo da Usina do Jet' },
-      { src: '/images/image2.png', alt: 'Registro do universo náutico da Usina do Jet' },
-      { src: '/images/image1.png', alt: 'Jet ski em uma experiência da Usina do Jet' },
+    title: 'Corridas de jet',
+    circleTitle: 'Corridas de jet',
+    eyebrow: 'Velocidade com propósito',
+    description: 'A energia das competições vista de perto, do preparo antes da largada aos encontros que acontecem fora da pista.',
+    story: 'A corrida dura alguns minutos. A preparação, a parceria e tudo o que ela desperta ficam por muito mais tempo.',
+    details: [
+      'A Usina acompanha esse universo por inteiro: os pilotos, as equipes, os bastidores e a emoção de quem vive cada etapa de verdade.',
+      'Mais do que registrar velocidade, buscamos mostrar as pessoas e as histórias que fazem o esporte continuar crescendo.',
     ],
+    image: '/images/image3.png',
+    imageAlt: 'Piloto durante uma corrida de jet',
+    gallery: saoSebastiaoGallery,
   },
   {
     number: '03',
-    title: 'Off-Road',
-    description: 'Experiências e colaborações construídas com marcas e pessoas que compartilham a mesma paixão pelo mundo náutico.',
-    story: 'As melhores ideias ganham força quando são construídas com gente que acredita na mesma história.',
-    image: '/images/image4.png',
-    imageAlt: 'Encontro realizado pela comunidade Usina do Jet',
-    gallery: [
-      { src: '/images/image4.png', alt: 'Encontro realizado pela comunidade Usina do Jet' },
-      { src: '/images/image3.png', alt: 'Experiência construída com parceiros da Usina do Jet' },
-      { src: '/images/image1.png', alt: 'Pessoas reunidas em uma ação da Usina do Jet' },
+    title: 'Cobertura de eventos nacionais e internacionais',
+    circleTitle: 'Cobertura de eventos',
+    eyebrow: 'Onde a cena acontece',
+    description: 'Presença em eventos no Brasil e no exterior para transformar cada momento importante em imagem, contexto e memória.',
+    story: 'Uma boa cobertura não olha apenas para o palco. Ela percebe o clima, os bastidores e tudo o que faz aquele encontro ser único.',
+    details: [
+      'A narrativa começa antes do primeiro clique. Entendemos o evento, acompanhamos seus momentos essenciais e construímos um registro com identidade.',
+      'O resultado reúne movimento, pessoas e detalhes para que a experiência continue viva e possa chegar a quem não estava ali.',
     ],
+    image: '/images/image1.png',
+    imageAlt: 'Evento náutico acompanhado pela Usina do Jet',
+    gallery: camposGallery,
   },
   {
     number: '04',
-    title: 'Nova frente',
-    description: 'Um novo caminho da Usina do Jet que será apresentado em breve.',
-    story: 'Estamos preparando esta nova frente. Em breve, este espaço contará sua história e reunirá seus principais registros.',
-    image: '/images/image2.png',
-    imageAlt: 'Registro temporário da nova frente da Usina do Jet',
-    gallery: [
-      { src: '/images/image2.png', alt: 'Registro temporário da nova frente da Usina do Jet' },
-      { src: '/images/image3.png', alt: 'Experiência da Usina do Jet' },
-      { src: '/images/image4.png', alt: 'Comunidade reunida em uma experiência da Usina do Jet' },
+    title: 'Reportagens e conteúdo',
+    circleTitle: 'Reportagens e conteúdo',
+    eyebrow: 'Histórias bem contadas',
+    description: 'Reportagens, entrevistas e registros que aproximam o público das pessoas, dos lugares e das novidades do universo do jet.',
+    story: 'Conteúdo bom não precisa aumentar o tom. Precisa encontrar o olhar certo e contar o que realmente vale ser lembrado.',
+    details: [
+      'Criamos narrativas que combinam informação e sensibilidade, sem perder a linguagem direta de quem conhece esse universo por dentro.',
+      'São histórias construídas no caminho, ouvindo personagens, observando detalhes e deixando a experiência falar com naturalidade.',
     ],
+    image: '/images/image4.png',
+    imageAlt: 'Personagem retratado em conteúdo da Usina do Jet',
+    gallery: angraGallery.slice().reverse(),
+  },
+  {
+    number: '05',
+    title: 'Podcast Usina do Jet',
+    circleTitle: 'Podcast Usina do Jet',
+    eyebrow: 'Conversas sem pressa',
+    description: 'Um espaço para ouvir quem movimenta o universo náutico e conhecer as histórias que normalmente ficam longe das câmeras.',
+    story: 'Toda trajetória tem uma parte que não cabe na legenda. É essa conversa que queremos trazer para perto.',
+    details: [
+      'Pilotos, organizadores, viajantes e pessoas ligadas ao jet compartilham experiências, aprendizados e momentos que ajudaram a construir seus caminhos.',
+      'O formato é simples e humano: uma boa conversa, tempo para aprofundar e curiosidade para chegar ao que ainda não foi contado.',
+    ],
+    image: '/images/Formulario/Carrosel/imagem6.jpeg',
+    imageAlt: 'Conversa com integrantes da comunidade Usina do Jet',
+    gallery: camposGallery.slice().reverse(),
+  },
+  {
+    number: '06',
+    title: 'Produtos e equipamentos',
+    circleTitle: 'Produtos e equipamentos',
+    eyebrow: 'Escolhas para viver a água',
+    description: 'Uma seleção de equipamentos, acessórios e peças para quem já vive o jet ou está preparando a próxima experiência.',
+    story: 'O produto certo resolve o que precisa e deixa mais espaço para aproveitar o que realmente importa.',
+    details: [
+      'Reunimos itens disponíveis no catálogo da Usina com informação clara, acesso rápido aos detalhes e caminhos simples para comprar.',
+      'A seleção abaixo acompanha o catálogo atual. Se quiser explorar outras categorias, é só seguir para a vitrine completa.',
+    ],
+    image: '/images/image5.png',
+    imageAlt: 'Seleção de produtos e equipamentos da Usina do Jet',
+    gallery: capitolioGallery,
+    kind: 'products',
+  },
+  {
+    number: '07',
+    title: 'Experiências especiais',
+    circleTitle: 'Experiências especiais',
+    eyebrow: 'Do mar à terra',
+    description: 'Encontros desenhados para viver novos lugares com presença, boa companhia e o cuidado que já faz parte da Usina.',
+    story: 'Nem toda experiência precisa seguir a mesma rota. Algumas começam na água, outras na estrada, mas todas começam com gente.',
+    details: [
+      'Criamos momentos que respeitam o espírito de cada destino e aproximam pessoas que compartilham a vontade de descobrir algo novo.',
+      'A proposta muda conforme o lugar, o grupo e a ocasião. O cuidado com a experiência, porém, continua sendo o mesmo.',
+    ],
+    image: '/images/Expedi%C3%A7%C3%A3o4.jpeg',
+    imageAlt: 'Experiência especial da Usina do Jet em terra',
+    gallery: capitolioGallery,
   },
 ]
+
+const featuredProducts = produtos.filter((product) => product.disponivel).slice(0, 16)
+
+function getProductImage(product: Produto) {
+  const colorImages = product.imagensPorCor
+    ? Object.values(product.imagensPorCor).find((images) => images.length > 0)
+    : undefined
+
+  return colorImages?.[0] ?? product.imagens[0] ?? '/images/image5.png'
+}
+
+function getProductCategory(product: Produto) {
+  return Array.isArray(product.categoria) ? product.categoria[0] : product.categoria
+}
 
 interface RevealProps {
   children: ReactNode
@@ -169,12 +293,16 @@ function SmartImage({ src, alt, className = '', eager = false }: SmartImageProps
 }
 
 const manifestoMetrics = [
-  { value: '03', label: 'Expedições realizadas' },
+  {
+    value: '+50',
+    label: 'Eventos realizados',
+    note: 'Expedições, corridas de jet e encontros no Brasil e no exterior.',
+  },
   { value: '2018', label: 'O início da nossa história' },
   { value: '100%', label: 'Experiência acompanhada' },
 ]
 
-function AnimatedMetric({ value, label, index }: { value: string; label: string; index: number }) {
+function AnimatedMetric({ value, label, note, index }: { value: string; label: string; note?: string; index: number }) {
   const ref = useRef<HTMLElement | null>(null)
   const isInView = useInView(ref, { once: true, margin: '-50px' })
   const reduceMotion = useReducedMotion()
@@ -198,7 +326,8 @@ function AnimatedMetric({ value, label, index }: { value: string; label: string;
           </span>
         ))}
       </strong>
-      <span>{label}</span>
+      <span className="manifesto-stat-label">{label}</span>
+      {note && <small className="manifesto-stat-note">{note}</small>}
     </div>
   )
 }
@@ -297,7 +426,7 @@ function ManifestoSection() {
             }}
           >
             <p className="section-copy manifesto-copy">
-              Desde 2018, reunimos pessoas movidas pela descoberta. Cada expedição nasce do cuidado com o roteiro, da estrutura de apoio e da vontade de viver a paisagem de um jeito mais intenso.
+              Desde 2018, reunimos pessoas movidas pela descoberta. Cada expedição e cada evento, seja ele no mar ou na terra, nasce do cuidado com o roteiro, da estrutura de apoio e da vontade de viver a paisagem de um jeito mais intenso.
             </p>
             <Link to="/expedicoes" className="text-link">
               Conheça nossas expedições <ArrowRight aria-hidden="true" size={18} />
@@ -310,6 +439,7 @@ function ManifestoSection() {
                 key={metric.label}
                 value={metric.value}
                 label={metric.label}
+                note={metric.note}
                 index={index}
               />
             ))}
@@ -332,10 +462,13 @@ function ServicesSection() {
   const [openedService, setOpenedService] = useState<number | null>(null)
 
   const routePaths = [
-    'M 495 300 C 420 255, 325 190, 190 150',
-    'M 705 300 C 790 250, 910 190, 1040 155',
-    'M 495 440 C 420 480, 325 540, 205 590',
-    'M 705 440 C 790 480, 900 540, 1005 585',
+    'M 520 330 C 430 270, 330 185, 205 145',
+    'M 680 330 C 785 255, 900 185, 1010 150',
+    'M 470 390 C 350 390, 235 385, 105 390',
+    'M 730 390 C 850 395, 980 390, 1095 405',
+    'M 515 455 C 440 520, 350 590, 275 650',
+    'M 600 480 C 605 550, 610 620, 610 690',
+    'M 690 455 C 780 520, 880 585, 985 635',
   ]
   const selectedService = openedService === null ? null : services[openedService]
   const skipPortalIntro = Boolean(reduceMotion || hasOpenedServiceRef.current)
@@ -344,6 +477,21 @@ function ServicesSection() {
     hasOpenedServiceRef.current = true
     setActiveService(index)
     setOpenedService(index)
+    requestAnimationFrame(() => {
+      portalRef.current?.scrollIntoView({ block: 'start', behavior: 'auto' })
+    })
+  }
+
+  const closeService = () => {
+    setOpenedService(null)
+    setActiveService(null)
+  }
+
+  const returnToPaths = () => {
+    closeService()
+    requestAnimationFrame(() => {
+      portalRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    })
   }
 
   return (
@@ -366,8 +514,7 @@ function ServicesSection() {
         </Reveal>
       </div>
 
-      <LayoutGroup id="services-portal">
-        <div
+      <div
           ref={portalRef}
           className={`services-portal-stage${selectedService ? ' is-detail-open' : ''}`}
         >
@@ -378,12 +525,12 @@ function ServicesSection() {
                 className={`services-portal-orbit${activeService !== null ? ' has-active-node' : ''}`}
                 initial={skipPortalIntro ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.985 }}
-                transition={{ duration: reduceMotion ? 0 : 0.55 }}
+                exit={reduceMotion ? undefined : { opacity: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.2 }}
               >
                 <svg
                   className="services-portal-routes"
-                  viewBox="0 0 1200 740"
+                  viewBox="0 0 1200 800"
                   preserveAspectRatio="xMidYMid meet"
                   aria-hidden="true"
                 >
@@ -461,8 +608,8 @@ function ServicesSection() {
                         initial={skipPortalIntro ? false : {
                           opacity: 0,
                           scale: 0.82,
-                          x: index % 2 === 0 ? -58 : 58,
-                          y: index < 2 ? -38 : 38,
+                          x: index === 2 ? -58 : index === 3 ? 58 : index < 2 ? (index === 0 ? -48 : 48) : 0,
+                          y: index < 2 ? -38 : index > 3 ? 38 : 0,
                           filter: 'blur(7px)',
                         }}
                         animate={portalHasEntered ? {
@@ -489,9 +636,7 @@ function ServicesSection() {
                           onClick={() => openService(index)}
                         >
                           <motion.span
-                            layoutId={`service-portal-media-${service.number}`}
                             className="services-portal-node-media"
-                            transition={{ duration: reduceMotion ? 0 : 0.72, ease: [0.16, 1, 0.3, 1] }}
                           >
                             <SmartImage src={service.image} alt={service.imageAlt} />
                             <span className="services-portal-node-shade" aria-hidden="true" />
@@ -508,7 +653,7 @@ function ServicesSection() {
                                 ease: [0.16, 1, 0.3, 1],
                               }}
                             >
-                              <strong>{service.title}</strong>
+                              <strong>{service.circleTitle}</strong>
                               <ArrowUpRight aria-hidden="true" size={16} />
                             </motion.span>
                           </span>
@@ -522,85 +667,152 @@ function ServicesSection() {
             {selectedService && (
               <motion.article
                 key={`services-detail-${selectedService.number}`}
-                className="services-portal-detail"
+                className={`services-portal-detail services-portal-detail-${selectedService.kind ?? 'editorial'}`}
                 aria-labelledby={`services-portal-title-${selectedService.number}`}
                 aria-live="polite"
-                initial={reduceMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0 }}
-                transition={{ duration: reduceMotion ? 0 : 0.48 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: 10 }}
+                transition={{ duration: reduceMotion ? 0 : 0.58, ease: [0.16, 1, 0.3, 1] }}
               >
-                <motion.figure
-                  layoutId={`service-portal-media-${selectedService.number}`}
-                  className="services-portal-detail-media"
-                  transition={{ duration: reduceMotion ? 0 : 0.76, ease: [0.16, 1, 0.3, 1] }}
+                <button
+                  type="button"
+                  className="services-portal-close"
+                  onClick={closeService}
+                  aria-label={`Fechar detalhes de ${selectedService.title}`}
                 >
-                  <SmartImage src={selectedService.gallery[0].src} alt={selectedService.gallery[0].alt} />
-                  <span className="services-portal-detail-shade" aria-hidden="true" />
-                  <figcaption className="mono">Arquivo Usina / {selectedService.number}</figcaption>
-                </motion.figure>
+                  <X aria-hidden="true" size={20} />
+                </button>
 
-                <motion.div
-                  className="services-portal-detail-copy"
-                  initial={reduceMotion ? false : { opacity: 0, x: 28 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: reduceMotion ? 0 : 0.68, delay: reduceMotion ? 0 : 0.2, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  <header className="services-portal-detail-header">
-                    <span className="mono">Por dentro da Usina</span>
-                    <button
-                      type="button"
-                      className="services-portal-close"
-                      onClick={() => {
-                        setOpenedService(null)
-                        setActiveService(null)
-                      }}
-                      aria-label={`Fechar detalhes de ${selectedService.title}`}
-                    >
-                      <X aria-hidden="true" size={19} />
-                    </button>
-                  </header>
+                <header className="services-portal-detail-hero">
+                  <motion.figure
+                    className="services-portal-detail-media"
+                    initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.58, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <SmartImage src={selectedService.gallery[0].src} alt={selectedService.gallery[0].alt} eager />
+                    <span className="services-portal-detail-shade" aria-hidden="true" />
+                    <figcaption className="mono">Arquivo Usina / {selectedService.number}</figcaption>
+                  </motion.figure>
 
-                  <span className="mono services-portal-detail-index">{selectedService.number}</span>
-                  <h3 id={`services-portal-title-${selectedService.number}`} className="display">
-                    {selectedService.title}
-                  </h3>
-                  <p>{selectedService.description}</p>
-                  <blockquote>{selectedService.story}</blockquote>
+                  <motion.div
+                    className="services-portal-detail-copy"
+                    initial={reduceMotion ? false : { opacity: 0, x: 26 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.68, delay: reduceMotion ? 0 : 0.16, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <span className="mono services-portal-detail-eyebrow">{selectedService.eyebrow}</span>
+                    <span className="mono services-portal-detail-index">{selectedService.number}</span>
+                    <h3 id={`services-portal-title-${selectedService.number}`} className="display">
+                      {selectedService.title}
+                    </h3>
+                    <p>{selectedService.description}</p>
+                    <blockquote>{selectedService.story}</blockquote>
+                  </motion.div>
+                </header>
 
-                  <div className="services-portal-detail-thumbs" aria-label="Mais registros">
-                    {selectedService.gallery.slice(1).map((image, index) => (
-                      <motion.figure
-                        key={`${selectedService.number}-${image.src}-${index}`}
-                        initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: reduceMotion ? 0 : 0.55, delay: reduceMotion ? 0 : 0.36 + index * 0.08 }}
-                      >
-                        <SmartImage src={image.src} alt={image.alt} />
-                      </motion.figure>
-                    ))}
-                  </div>
+                <div className="services-portal-detail-body">
+                  <section className="services-portal-narrative" aria-label={`Sobre ${selectedService.title}`}>
+                    <div>
+                      <span className="mono">Por dentro da Usina</span>
+                      <h4 className="display">Mais do que uma imagem.</h4>
+                    </div>
+                    <div className="services-portal-narrative-copy">
+                      {selectedService.details.map((paragraph) => (
+                        <p key={paragraph}>{paragraph}</p>
+                      ))}
+                    </div>
+                  </section>
 
-                  <nav className="services-portal-detail-nav" aria-label="Outros caminhos da Usina">
-                    {services.map((service, index) => (
-                      <button
-                        key={service.number}
-                        type="button"
-                        className={openedService === index ? 'is-current' : ''}
-                        onClick={() => openService(index)}
-                        aria-label={`Abrir ${service.title}`}
-                        aria-current={openedService === index ? 'true' : undefined}
-                      >
-                        <span className="mono">{service.number}</span>
+                  {selectedService.kind === 'products' ? (
+                    <section className="services-products" aria-labelledby="services-products-title">
+                      <header className="services-products-heading">
+                        <div>
+                          <span className="mono">Seleção do catálogo</span>
+                          <h4 id="services-products-title" className="display">Principais produtos</h4>
+                        </div>
+                        <p>Uma amostra do que está disponível agora. Abra um item para ver fotos, variações e formas de compra.</p>
+                      </header>
+
+                      {featuredProducts.length > 0 ? (
+                        <div className="services-products-grid">
+                          {featuredProducts.map((product, index) => (
+                            <motion.div
+                              key={product.id}
+                              initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true, margin: '-30px' }}
+                              transition={{ duration: reduceMotion ? 0 : 0.5, delay: reduceMotion ? 0 : (index % 4) * 0.045 }}
+                            >
+                              <Link to={`/catalogo/produto/${product.id}`} className="services-product-card">
+                                <span className="services-product-image">
+                                  <SmartImage src={getProductImage(product)} alt={product.nome} />
+                                </span>
+                                <span className="services-product-copy">
+                                  <small className="mono">{getProductCategory(product)}</small>
+                                  <strong>{product.nome}</strong>
+                                  <span>{String(product.preco)}</span>
+                                </span>
+                                <ArrowUpRight aria-hidden="true" size={18} />
+                              </Link>
+                            </motion.div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="services-products-empty">Os produtos estão sendo atualizados. A vitrine completa continua disponível no catálogo.</p>
+                      )}
+
+                      <Link to="/catalogo" className="services-products-more">
+                        Ver catálogo completo <ArrowRight aria-hidden="true" size={18} />
+                      </Link>
+                    </section>
+                  ) : (
+                    <section className="services-portal-gallery" aria-label={`Registros de ${selectedService.title}`}>
+                      {selectedService.gallery.slice(1).map((image, index) => (
+                        <motion.figure
+                          key={`${selectedService.number}-${image.src}-${index}`}
+                          className={`services-portal-gallery-item services-portal-gallery-item-${index}`}
+                          initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, margin: '-50px' }}
+                          transition={{ duration: reduceMotion ? 0 : 0.58, delay: reduceMotion ? 0 : (index % 3) * 0.07 }}
+                        >
+                          <SmartImage src={image.src} alt={image.alt} />
+                          <figcaption className="mono">{String(index + 2).padStart(2, '0')}</figcaption>
+                        </motion.figure>
+                      ))}
+                    </section>
+                  )}
+
+                  <footer className="services-portal-detail-footer">
+                    <div className="services-portal-detail-return">
+                      <span className="mono">Terminou de explorar?</span>
+                      <button type="button" onClick={returnToPaths}>
+                        <ChevronLeft aria-hidden="true" size={18} />
+                        Voltar aos caminhos
                       </button>
-                    ))}
-                  </nav>
-                </motion.div>
+                    </div>
+                    <nav className="services-portal-detail-nav" aria-label="Outros caminhos da Usina">
+                      {services.map((service, index) => (
+                        <button
+                          key={service.number}
+                          type="button"
+                          className={openedService === index ? 'is-current' : ''}
+                          onClick={() => openService(index)}
+                          aria-label={`Abrir ${service.title}`}
+                          aria-current={openedService === index ? 'true' : undefined}
+                        >
+                          <span className="mono">{service.number}</span>
+                        </button>
+                      ))}
+                    </nav>
+                  </footer>
+                </div>
               </motion.article>
             )}
           </AnimatePresence>
-        </div>
-      </LayoutGroup>
+      </div>
     </section>
   )
 }
@@ -696,7 +908,9 @@ function BrandRail() {
   return <BrandBand id="brand-title" title="Marcas que navegam com a gente" />
 }
 function DestinationGallery() {
+  const sectionRef = useRef<HTMLElement | null>(null)
   const reduceMotion = useReducedMotion()
+  const isGalleryInView = useInView(sectionRef, { amount: 0.35 })
   const [current, setCurrent] = useState(0)
 
   const selectDestination = useCallback((index: number) => {
@@ -705,13 +919,13 @@ function DestinationGallery() {
   }, [])
 
   useEffect(() => {
-    if (reduceMotion) return
+    if (reduceMotion || !isGalleryInView) return
 
     let timeoutId = window.setTimeout(() => {
       if (document.visibilityState === 'visible') {
         setCurrent((value) => (value + 1) % destinations.length)
       }
-    }, 7000)
+    }, DESTINATION_AUTOPLAY_DURATION)
 
     const restartWhenVisible = () => {
       if (document.visibilityState !== 'visible') return
@@ -719,7 +933,7 @@ function DestinationGallery() {
       window.clearTimeout(timeoutId)
       timeoutId = window.setTimeout(
         () => setCurrent((value) => (value + 1) % destinations.length),
-        7000,
+        DESTINATION_AUTOPLAY_DURATION,
       )
     }
 
@@ -729,10 +943,10 @@ function DestinationGallery() {
       window.clearTimeout(timeoutId)
       document.removeEventListener('visibilitychange', restartWhenVisible)
     }
-  }, [current, reduceMotion])
+  }, [current, isGalleryInView, reduceMotion])
 
   return (
-    <section className="gallery-section" aria-labelledby="gallery-title">
+    <section ref={sectionRef} className="gallery-section" aria-labelledby="gallery-title">
       <div className="wrap gallery-heading">
         <Reveal>
           <span className="eyebrow">Destinos</span>
@@ -833,211 +1047,17 @@ function DestinationGallery() {
           ))}
         </div>
 
-        {!reduceMotion && (
+        {!reduceMotion && isGalleryInView && (
           <div className="gallery-timer" aria-hidden="true">
             <motion.span
               key={current}
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
-              transition={{ duration: 7, ease: 'linear' }}
+              transition={{ duration: DESTINATION_AUTOPLAY_DURATION / 1000, ease: 'linear' }}
             />
           </div>
         )}
       </motion.div>
-    </section>
-  )
-}
-
-interface CountdownValue {
-  days: number
-  hours: number
-  minutes: number
-  status: 'upcoming' | 'ongoing' | 'finished'
-}
-
-function calculateCountdown(start: string, end: string): CountdownValue {
-  const now = Date.now()
-  const startTime = new Date(start).getTime()
-  const endTime = new Date(end).getTime()
-
-  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
-    return { days: 0, hours: 0, minutes: 0, status: 'finished' }
-  }
-
-  if (now >= endTime) return { days: 0, hours: 0, minutes: 0, status: 'finished' }
-  if (now >= startTime) return { days: 0, hours: 0, minutes: 0, status: 'ongoing' }
-
-  const totalMinutes = Math.max(0, Math.ceil((startTime - now) / 60_000))
-  return {
-    days: Math.floor(totalMinutes / 1440),
-    hours: Math.floor((totalMinutes % 1440) / 60),
-    minutes: totalMinutes % 60,
-    status: 'upcoming',
-  }
-}
-
-function Countdown({ start, end }: { start: string; end: string }) {
-  const [countdown, setCountdown] = useState(() => calculateCountdown(start, end))
-  const reduceMotion = useReducedMotion()
-
-  useEffect(() => {
-    setCountdown(calculateCountdown(start, end))
-    const intervalId = window.setInterval(
-      () => setCountdown(calculateCountdown(start, end)),
-      30_000,
-    )
-    return () => window.clearInterval(intervalId)
-  }, [end, start])
-
-  if (countdown.status !== 'upcoming') {
-    return (
-      <p className="countdown-status">
-        {countdown.status === 'ongoing' ? 'A expedição está acontecendo' : 'Inscrições encerradas'}
-      </p>
-    )
-  }
-
-  const units = [
-    { value: countdown.days, label: 'Dias' },
-    { value: countdown.hours, label: 'Horas' },
-    { value: countdown.minutes, label: 'Minutos' },
-  ]
-
-  return (
-    <div
-      className="countdown"
-      role="timer"
-      aria-live="off"
-      aria-label={`Faltam ${countdown.days} dias, ${countdown.hours} horas e ${countdown.minutes} minutos`}
-    >
-      {units.map((unit) => (
-        <div className="countdown-unit" key={unit.label}>
-          <span className="display countdown-value">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                className="countdown-value-inner"
-                key={unit.value}
-                initial={reduceMotion ? false : { opacity: 0, y: '45%' }}
-                animate={{ opacity: 1, y: '0%' }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: '-35%' }}
-                transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.16, 1, 0.3, 1] }}
-              >
-                {String(unit.value).padStart(2, '0')}
-              </motion.span>
-            </AnimatePresence>
-          </span>
-          <small>{unit.label}</small>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function NextExpeditionSection() {
-  const sectionRef = useRef<HTMLElement | null>(null)
-  const mediaInView = useInView(sectionRef, { once: true, margin: '-110px' })
-  const reduceMotion = useReducedMotion()
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ['start end', 'end start'],
-  })
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 72,
-    damping: 24,
-    mass: 0.34,
-  })
-  const imageY = useTransform(smoothProgress, [0, 1], ['-3.5%', '3.5%'])
-  const imageScale = useTransform(smoothProgress, [0, 0.55, 1], [1.08, 1.035, 1.01])
-
-  return (
-    <section ref={sectionRef} className="next-section" aria-labelledby="next-title">
-      <div className="wrap">
-        <Reveal className="next-heading">
-          <div>
-            <span className="eyebrow">Próxima expedição</span>
-            <h2 id="next-title" className="display section-title">
-              Campos do Jordão
-            </h2>
-          </div>
-          <p className="section-copy">
-            Três dias de serra, trilhas e paisagens marcantes, com roteiro guiado e suporte da equipe do início ao fim.
-          </p>
-        </Reveal>
-
-        <div className="expedition-feature">
-          <motion.div
-            className="expedition-media"
-            initial={reduceMotion ? false : { clipPath: 'inset(0 100% 0 0)' }}
-            animate={mediaInView ? { clipPath: 'inset(0 0% 0 0)' } : undefined}
-            transition={{ duration: reduceMotion ? 0 : 1.05, ease: [0.16, 1, 0.3, 1] }}
-          >
-            <Link
-              to={EXPEDITION_PATH}
-              className="expedition-media-link"
-              aria-label="Conhecer a expedição Campos do Jordão"
-            >
-              <motion.div
-                className="expedition-image-motion"
-                style={{
-                  y: reduceMotion ? 0 : imageY,
-                  scale: reduceMotion ? 1 : imageScale,
-                }}
-              >
-                <SmartImage
-                  src="/images/Expedição4.jpeg"
-                  alt="Expedição em Campos do Jordão"
-                />
-              </motion.div>
-              <span className="expedition-badge">
-                <i aria-hidden="true" /> Vagas abertas
-              </span>
-              <span className="expedition-location">
-                <strong>Campos do Jordão</strong>
-                <small>Serra da Mantiqueira · São Paulo</small>
-              </span>
-            </Link>
-          </motion.div>
-
-          <motion.div
-            className="expedition-panel"
-            initial={reduceMotion ? false : { opacity: 0, x: 38 }}
-            animate={mediaInView ? { opacity: 1, x: 0 } : undefined}
-            transition={{
-              duration: reduceMotion ? 0 : 0.85,
-              delay: reduceMotion ? 0 : 0.18,
-              ease: [0.16, 1, 0.3, 1],
-            }}
-          >
-            <div>
-              <p className="mono expedition-date">21–23 de agosto de 2026</p>
-              <h3>A expedição começa em</h3>
-              <Countdown
-                start="2026-08-21T08:00:00-03:00"
-                end="2026-08-23T20:00:00-03:00"
-              />
-            </div>
-
-            <dl className="expedition-facts">
-              <div>
-                <dt>Duração</dt>
-                <dd>3 dias</dd>
-              </div>
-              <div>
-                <dt>Disponibilidade</dt>
-                <dd>poucas vagas</dd>
-              </div>
-              <div>
-                <dt>Investimento</dt>
-                <dd>R$ 3.800</dd>
-              </div>
-            </dl>
-
-            <Link to={EXPEDITION_PATH} className="btn-dark expedition-cta">
-              Ver roteiro completo <ArrowRight aria-hidden="true" size={18} />
-            </Link>
-          </motion.div>
-        </div>
-      </div>
     </section>
   )
 }
@@ -1105,11 +1125,11 @@ export default function Home({
                 animate={heroContentVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
                 transition={{ duration: reduceMotion ? 0 : 0.6, delay: reduceMotion ? 0 : 0.08 }}
               >
-                <span className="mono">Expedições pelo Brasil · Desde 2018</span>
+                <span className="mono">Eventos e expedições pelo Brasil · Desde 2018</span>
               </motion.div>
 
               <h1 id="home-title" className="display hero-title">
-                {['O Brasil visto', 'de outro ângulo.'].map((line, index) => (
+                {['Eventos e expedição', 'de jet pelo Brasil.'].map((line, index) => (
                   <span className="hero-title-mask" key={line}>
                     <motion.span
                       initial={reduceMotion ? false : { y: '125%', opacity: 0 }}
@@ -1148,7 +1168,7 @@ export default function Home({
                 animate={heroContentVisible ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
                 transition={{ duration: reduceMotion ? 0 : 0.65, delay: reduceMotion ? 0 : 0.48 }}
               >
-                Onde a velocidade encontra a natureza.
+                Onde a experiência encontra a natureza.
               </motion.p>
 
               <motion.div
@@ -1204,7 +1224,6 @@ export default function Home({
       <ManifestoSection />
       <PartnerRibbon />
       <ServicesSection />
-      <NextExpeditionSection />
       <DestinationGallery />
       <BrandRail />
 
