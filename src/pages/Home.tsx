@@ -33,24 +33,45 @@ const EXPEDITION_PATH = '/expedicoes/campos-do-jordao-2026'
 const DESTINATION_AUTOPLAY_DURATION = 10_000
 const activeBrands = patrocinadores.filter((brand) => brand.ativo)
 
-const destinations = [
+interface Destination {
+  name: string
+  state: string
+  edition: string
+  image: string
+  imageClassName?: string
+}
+
+const destinations: Destination[] = [
   {
-    name: 'Angra dos Reis',
+    name: 'Angra x Paraty',
     state: 'Rio de Janeiro',
     edition: 'Expedição 01',
-    image: '/images/image1.png',
+    image: '/images/Angra.webp',
   },
   {
     name: 'Capitólio',
     state: 'Minas Gerais',
     edition: 'Expedição 02',
-    image: '/images/image2.png',
+    image: '/images/Capitolio.png',
   },
   {
-    name: 'São Sebastião',
+    name: 'São Sebastião x Ilhabela',
     state: 'São Paulo',
     edition: 'Expedição 03',
-    image: '/images/image3.png',
+    image: '/images/SaoSebastiao.png',
+  },
+  {
+    name: 'Alter do Chão',
+    state: 'Pará',
+    edition: 'Expedição 04',
+    image: '/images/AlterdoChão.jpg',
+    imageClassName: 'gallery-image-alter',
+  },
+  {
+    name: 'Bahamas',
+    state: 'Destino internacional',
+    edition: 'Expedição 05',
+    image: '/images/bahamas.png',
   },
 ]
 
@@ -69,44 +90,57 @@ interface ServiceDefinition {
   details: string[]
   image: string
   imageAlt: string
+  coverImage: ServiceImage
   gallery: ServiceImage[]
-  kind?: 'editorial' | 'products'
+  galleryLayout?: 'mosaic' | 'portrait'
+  kind?: 'editorial' | 'products' | 'reporting'
 }
 
-const angraGallery: ServiceImage[] = [
-  { src: '/images/Angra/CAPA%20ANGRA.webp', alt: 'Expedição da Usina do Jet em Angra dos Reis' },
+const expedicaoGallery: ServiceImage[] = [
+  { src: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image1.png', alt: 'Expedição da Usina do Jet em Angra dos Reis' },
   { src: '/images/Angra/FOTO%202.webp', alt: 'Jet skis durante o percurso em Angra dos Reis' },
-  { src: '/images/Angra/FOTO%203.webp', alt: 'Participantes reunidos durante a expedição' },
-  { src: '/images/Angra/FOTO%204.webp', alt: 'Paisagem registrada durante a expedição em Angra' },
-  { src: '/images/Angra/FOTO%205.webp', alt: 'Momento do grupo durante o trajeto náutico' },
-  { src: '/images/Angra/FOTO%206.webp', alt: 'Registro da experiência da Usina do Jet em Angra' },
+  { src: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image2.png', alt: 'Participantes reunidos durante a expedição' },
+  { src: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image3.png', alt: 'Paisagem registrada durante a expedição em Angra' },
+  { src: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image4.png', alt: 'Momento do grupo durante o trajeto náutico' },
+  { src: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image7.png', alt: 'Registro da experiência da Usina do Jet em Angra' },
 ]
 
-const capitolioGallery: ServiceImage[] = [
-  { src: '/images/Capitolio/capa.webp', alt: 'Experiência da Usina do Jet em Capitólio' },
-  { src: '/images/Capitolio/FOTO%201.webp', alt: 'Jet skis navegando em Capitólio' },
-  { src: '/images/Capitolio/FOTO%202.webp', alt: 'Participantes durante o roteiro em Capitólio' },
-  { src: '/images/Capitolio/FOTO%203.webp', alt: 'Paisagem do percurso em Capitólio' },
-  { src: '/images/Capitolio/FOTO%204.webp', alt: 'Momento vivido durante a viagem' },
-  { src: '/images/Capitolio/FOTO%205.webp', alt: 'Registro da comunidade Usina do Jet' },
+const OffRoadGallery: ServiceImage[] = [
+  { src: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image1.png', alt: 'Travessia da Usina do Jet entre São Sebastião e Ilhabela' },
+  { src: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image2.png', alt: 'Participantes na travessia de São Sebastião' },
+  { src: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image3.png', alt: 'Jet skis durante a experiência no litoral paulista' },
+  { src: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image4.png', alt: 'Registro da rota entre mar e ilha' },
+  { src: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image5.png', alt: 'Momento da expedição no litoral' },
+  { src: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image6.png', alt: 'Comunidade reunida durante o percurso' },
 ]
 
-const saoSebastiaoGallery: ServiceImage[] = [
-  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/SAO%20SEBAS%20X%20ILHABELA%20FOTOS%20SITE.webp', alt: 'Travessia da Usina do Jet entre São Sebastião e Ilhabela' },
-  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%201.webp', alt: 'Participantes na travessia de São Sebastião' },
-  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%202.webp', alt: 'Jet skis durante a experiência no litoral paulista' },
-  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%203.webp', alt: 'Registro da rota entre mar e ilha' },
-  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%204.webp', alt: 'Momento da expedição no litoral' },
-  { src: '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%205.webp', alt: 'Comunidade reunida durante o percurso' },
+const CorridadeJetGallery: ServiceImage[] = [
+  { src: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image6.png', alt: 'Travessia da Usina do Jet entre São Sebastião e Ilhabela' },
+  { src: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image2.png', alt: 'Participantes na travessia de São Sebastião' },
+  { src: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image3.png', alt: 'jet skis durante a experiência no litoral paulista' },
+  { src: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image4.png', alt: 'Registro da rota entre mar e ilha' },
+  { src: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image5.png', alt: 'Momento da expedição no litoral' },
+  { src: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image1.png', alt: 'Comunidade reunida durante o percurso' },
 ]
 
-const camposGallery: ServiceImage[] = [
-  { src: '/images/Expedi%C3%A7%C3%A3o4.jpeg', alt: 'Experiência da Usina do Jet em Campos do Jordão' },
-  { src: '/images/Formulario/Carrosel/imagem1.jpeg', alt: 'Registro de uma experiência da Usina do Jet' },
-  { src: '/images/Formulario/Carrosel/imagem2.jpeg', alt: 'Participantes reunidos durante um evento' },
-  { src: '/images/Formulario/Carrosel/imagem3.jpeg', alt: 'Momento vivido durante a experiência' },
-  { src: '/images/Formulario/Carrosel/imagem4.jpeg', alt: 'Paisagem do roteiro da Usina do Jet' },
-  { src: '/images/Formulario/Carrosel/imagem5.jpeg', alt: 'Registro da comunidade Usina do Jet' },
+const PodcastGallery: ServiceImage[] = [
+  { src: '/images/ImagensHome/O_que_fazemos/Podcast/image6.png', alt: 'Experiência da Usina do Jet em Campos do Jordão' },
+  { src: '/images/ImagensHome/O_que_fazemos/Podcast/image2.png', alt: 'Registro de uma experiência da Usina do Jet' },
+  { src: '/images/ImagensHome/O_que_fazemos/Podcast/image3.png', alt: 'Participantes reunidos durante um evento' },
+  { src: '/images/ImagensHome/O_que_fazemos/Podcast/image4.png', alt: 'Momento vivido durante a experiência' },
+  { src: '/images/ImagensHome/O_que_fazemos/Podcast/image5.png', alt: 'Paisagem do roteiro da Usina do Jet' },
+  { src: '/images/ImagensHome/O_que_fazemos/Podcast/image1.png', alt: 'Registro da comunidade Usina do Jet' },
+]
+const CoberturaEventosGallery: ServiceImage[] = [
+  { src: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image5.png', alt: 'Experiência da Usina do Jet em Campos do Jordão' },
+  { src: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image2.png', alt: 'Registro de uma experiência da Usina do Jet' },
+  { src: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image9.png', alt: 'Participantes reunidos durante um evento' },
+  { src: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image7.png', alt: 'Momento vivido durante a experiência' },
+  { src: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image6.png', alt: 'Paisagem do roteiro da Usina do Jet' },
+  { src: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image8.png', alt: 'Registro da comunidade Usina do Jet' },
+]
+const produtosGallery: ServiceImage[] = [
+  { src: '/images/capaprodutos.jpeg', alt: 'Experiência da Usina do Jet em Campos do Jordão' },
 ]
 
 const services: ServiceDefinition[] = [
@@ -121,9 +155,10 @@ const services: ServiceDefinition[] = [
       'Cada saída é pensada com antecedência, respeitando o ritmo do grupo, as condições do percurso e tudo o que torna a viagem mais segura e gostosa de viver.',
       'Entre uma parada e outra, o destino deixa de ser apenas cenário. É ali que surgem os encontros, as descobertas e as histórias que continuam depois da água.',
     ],
-    image: '/images/image1.png',
+    image: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image1.png',
     imageAlt: 'Expedição náutica da Usina do Jet',
-    gallery: angraGallery,
+    coverImage: { src: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image1.png', alt: 'Expedição náutica da Usina do Jet' },
+    gallery: expedicaoGallery,
   },
   {
     number: '02',
@@ -136,9 +171,10 @@ const services: ServiceDefinition[] = [
       'A Usina acompanha esse universo por inteiro: os pilotos, as equipes, os bastidores e a emoção de quem vive cada etapa de verdade.',
       'Mais do que registrar velocidade, buscamos mostrar as pessoas e as histórias que fazem o esporte continuar crescendo.',
     ],
-    image: '/images/image3.png',
+    image: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image6.png',
     imageAlt: 'Piloto durante uma corrida de jet',
-    gallery: saoSebastiaoGallery,
+    coverImage: { src: '/images/ImagensHome/O_que_fazemos/Corridas_de_jet/image6.png', alt: 'Corrida de jet acompanhada pela Usina' },
+    gallery: CorridadeJetGallery,
   },
   {
     number: '03',
@@ -151,9 +187,10 @@ const services: ServiceDefinition[] = [
       'A narrativa começa antes do primeiro clique. Entendemos o evento, acompanhamos seus momentos essenciais e construímos um registro com identidade.',
       'O resultado reúne movimento, pessoas e detalhes para que a experiência continue viva e possa chegar a quem não estava ali.',
     ],
-    image: '/images/image1.png',
+    image: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image1.png',
     imageAlt: 'Evento náutico acompanhado pela Usina do Jet',
-    gallery: camposGallery,
+    coverImage: { src: '/images/ImagensHome/O_que_fazemos/Cobertura_de_Eventos/image1.png', alt: 'Registro do arquivo de eventos da Usina do Jet' },
+    gallery: CoberturaEventosGallery,
   },
   {
     number: '04',
@@ -162,13 +199,12 @@ const services: ServiceDefinition[] = [
     eyebrow: 'Histórias bem contadas',
     description: 'Reportagens, entrevistas e registros que aproximam o público das pessoas, dos lugares e das novidades do universo do jet.',
     story: 'Conteúdo bom não precisa aumentar o tom. Precisa encontrar o olhar certo e contar o que realmente vale ser lembrado.',
-    details: [
-      'Criamos narrativas que combinam informação e sensibilidade, sem perder a linguagem direta de quem conhece esse universo por dentro.',
-      'São histórias construídas no caminho, ouvindo personagens, observando detalhes e deixando a experiência falar com naturalidade.',
-    ],
-    image: '/images/image4.png',
+    details: [],
+    image: '/images/ImagensHome/O_que_fazemos/Reportagens/image1.png',
     imageAlt: 'Personagem retratado em conteúdo da Usina do Jet',
-    gallery: angraGallery.slice().reverse(),
+    coverImage: { src: '/images/ImagensHome/O_que_fazemos/Expedição_Náutica/image7.png', alt: 'Registro de uma expedição da Usina do Jet' },
+    gallery: [],
+    kind: 'reporting',
   },
   {
     number: '05',
@@ -181,9 +217,10 @@ const services: ServiceDefinition[] = [
       'Pilotos, organizadores, viajantes e pessoas ligadas ao jet compartilham experiências, aprendizados e momentos que ajudaram a construir seus caminhos.',
       'O formato é simples e humano: uma boa conversa, tempo para aprofundar e curiosidade para chegar ao que ainda não foi contado.',
     ],
-    image: '/images/Formulario/Carrosel/imagem6.jpeg',
+    image: '/images/ImagensHome/O_que_fazemos/Podcast/image1.png',
     imageAlt: 'Conversa com integrantes da comunidade Usina do Jet',
-    gallery: camposGallery.slice().reverse(),
+    coverImage: { src: '/images/ImagensHome/O_que_fazemos/Podcast/image1.png', alt: 'Podcast da Usina do Jet' },
+    gallery: PodcastGallery.slice().reverse(),
   },
   {
     number: '06',
@@ -196,9 +233,10 @@ const services: ServiceDefinition[] = [
       'Reunimos itens disponíveis no catálogo da Usina com informação clara, acesso rápido aos detalhes e caminhos simples para comprar.',
       'A seleção abaixo acompanha o catálogo atual. Se quiser explorar outras categorias, é só seguir para a vitrine completa.',
     ],
-    image: '/images/image5.png',
+    image: '/images/capaprodutos.jpeg',
     imageAlt: 'Seleção de produtos e equipamentos da Usina do Jet',
-    gallery: capitolioGallery,
+    coverImage: { src: '/images/capaprodutos.jpeg', alt: 'Produtos e equipamentos da Usina do Jet' },
+    gallery: produtosGallery,
     kind: 'products',
   },
   {
@@ -212,9 +250,11 @@ const services: ServiceDefinition[] = [
       'Criamos momentos que respeitam o espírito de cada destino e aproximam pessoas que compartilham a vontade de descobrir algo novo.',
       'A proposta muda conforme o lugar, o grupo e a ocasião. O cuidado com a experiência, porém, continua sendo o mesmo.',
     ],
-    image: '/images/Expedi%C3%A7%C3%A3o4.jpeg',
+    image: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image1.png',
     imageAlt: 'Experiência especial da Usina do Jet em terra',
-    gallery: capitolioGallery,
+    gallery: OffRoadGallery,
+    coverImage: { src: '/images/ImagensHome/O_que_fazemos/Experiencias_especiais/image1.png', alt: 'Experiência off-road da Usina do Jet' },
+    galleryLayout: 'portrait',
   },
 ]
 
@@ -347,8 +387,6 @@ function ManifestoSection() {
     damping: 24,
     mass: 0.35,
   })
-  const imageScale = useTransform(smoothProgress, [0, 0.55, 1], [1.1, 1.035, 1])
-  const imageY = useTransform(smoothProgress, [0, 1], ['-4%', '4%'])
   const wakeProgress = useTransform(smoothProgress, [0.16, 0.78], [0, 1])
 
   return (
@@ -364,18 +402,12 @@ function ManifestoSection() {
           animate={sectionInView ? { clipPath: 'inset(0 0% 0 0)' } : undefined}
           transition={{ duration: reduceMotion ? 0 : 1.08, ease: [0.16, 1, 0.3, 1] }}
         >
-          <motion.div
-            className="manifesto-image-motion"
-            style={{
-              scale: reduceMotion ? 1 : imageScale,
-              y: reduceMotion ? 0 : imageY,
-            }}
-          >
+          <div className="manifesto-image-motion">
             <SmartImage
-              src="/images/image4.png"
-              alt="Participantes da Usina do Jet durante uma expedição"
+              src="/images/FOTO%201%20V2.png"
+              alt="Vista aérea de um grupo de jet skis navegando em uma expedição da Usina do Jet"
             />
-          </motion.div>
+          </div>
           <div className="manifesto-media-shade" aria-hidden="true" />
           <motion.span
             className="manifesto-wake"
@@ -445,6 +477,82 @@ function ManifestoSection() {
             ))}
           </div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+const reportingTopics = [
+  {
+    id: 'reportagens',
+    title: 'Reportagens e informação',
+    paragraphs: [
+      'Acompanhamos eventos, novidades e experiências do universo náutico. O trabalho reúne reportagens, entrevistas e conteúdo técnico, com uma linguagem direta para quem já vive o esporte e para quem está chegando agora.',
+      'Além de mostrar, queremos explicar: ouvir quem conhece o assunto e dar contexto ao que acontece dentro e fora da água.',
+    ],
+  },
+  {
+    id: 'eventos',
+    title: 'Dos eventos à canoagem',
+    paragraphs: [
+      'O jet é parte da nossa história, mas as pautas não param nele. A canoagem brasileira também faz parte dos eventos que acompanhamos, ampliando o espaço para outras modalidades e para as pessoas que vivem o esporte.',
+      'Em cada cobertura, o olhar vai para a competição e para o entorno: a preparação, o encontro entre participantes e o trabalho de quem faz tudo acontecer.',
+    ],
+  },
+  {
+    id: 'bastidores',
+    title: 'Entrevistas e bastidores',
+    paragraphs: [
+      'Conversar com atletas, organizadores e profissionais do setor ajuda a contar o que uma imagem sozinha não explica. São experiências, escolhas e aprendizados de quem está ali, com espaço para cada pessoa falar do seu jeito.',
+      'Esses relatos ganham continuidade nos vídeos e nas reportagens da Usina, para que o público possa acompanhar as histórias mesmo depois do evento.',
+    ],
+  },
+]
+
+function ReportingContent() {
+  return (
+    <section className="services-reporting" aria-labelledby="services-reporting-title">
+      <header className="services-reporting-heading">
+        <div>
+          <span className="mono services-reporting-eyebrow">Por dentro do nosso trabalho</span>
+          <h4 id="services-reporting-title" className="display">O que a gente conta.</h4>
+        </div>
+        <p>
+          A câmera registra o momento. A reportagem aproxima o público de quem estava lá.
+          É desse encontro entre imagem, conversa e informação que nasce o conteúdo da Usina.
+        </p>
+      </header>
+
+      <div className="services-reporting-topics">
+        {reportingTopics.map((topic, index) => (
+          <section
+            key={topic.id}
+            className="services-reporting-topic"
+            aria-labelledby={`services-reporting-${topic.id}`}
+          >
+            <div className="services-reporting-topic-heading">
+              <span className="mono services-reporting-number" aria-hidden="true">
+                {String(index + 1).padStart(2, '0')}
+              </span>
+              <h5 id={`services-reporting-${topic.id}`} className="display">{topic.title}</h5>
+            </div>
+            <div className="services-reporting-copy">
+              {topic.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <div className="services-reporting-channel">
+        <p>Vídeos, entrevistas e reportagens completas no canal da Usina do Jet.</p>
+        <a
+          href="https://www.youtube.com/@usinadojet"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Ver reportagens no YouTube, abre em nova aba"
+        >
+          Ver reportagens no YouTube <ArrowUpRight aria-hidden="true" size={20} />
+        </a>
       </div>
     </section>
   )
@@ -691,7 +799,7 @@ function ServicesSection() {
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: reduceMotion ? 0 : 0.58, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    <SmartImage src={selectedService.gallery[0].src} alt={selectedService.gallery[0].alt} eager />
+                    <SmartImage src={selectedService.coverImage.src} alt={selectedService.coverImage.alt} eager />
                     <span className="services-portal-detail-shade" aria-hidden="true" />
                     <figcaption className="mono">Arquivo Usina / {selectedService.number}</figcaption>
                   </motion.figure>
@@ -713,19 +821,23 @@ function ServicesSection() {
                 </header>
 
                 <div className="services-portal-detail-body">
-                  <section className="services-portal-narrative" aria-label={`Sobre ${selectedService.title}`}>
-                    <div>
-                      <span className="mono">Por dentro da Usina</span>
-                      <h4 className="display">Mais do que uma imagem.</h4>
-                    </div>
-                    <div className="services-portal-narrative-copy">
-                      {selectedService.details.map((paragraph) => (
-                        <p key={paragraph}>{paragraph}</p>
-                      ))}
-                    </div>
-                  </section>
+                  {selectedService.kind !== 'reporting' && (
+                    <section className="services-portal-narrative" aria-label={`Sobre ${selectedService.title}`}>
+                      <div>
+                        <span className="mono">Por dentro da Usina</span>
+                        <h4 className="display">Mais do que uma imagem.</h4>
+                      </div>
+                      <div className="services-portal-narrative-copy">
+                        {selectedService.details.map((paragraph) => (
+                          <p key={paragraph}>{paragraph}</p>
+                        ))}
+                      </div>
+                    </section>
+                  )}
 
-                  {selectedService.kind === 'products' ? (
+                  {selectedService.kind === 'reporting' ? (
+                    <ReportingContent />
+                  ) : selectedService.kind === 'products' ? (
                     <section className="services-products" aria-labelledby="services-products-title">
                       <header className="services-products-heading">
                         <div>
@@ -768,8 +880,8 @@ function ServicesSection() {
                       </Link>
                     </section>
                   ) : (
-                    <section className="services-portal-gallery" aria-label={`Registros de ${selectedService.title}`}>
-                      {selectedService.gallery.slice(1).map((image, index) => (
+                    <section className={`services-portal-gallery${selectedService.galleryLayout === 'portrait' ? ' services-portal-gallery-portrait' : ''}`} aria-label={`Registros de ${selectedService.title}`}>
+                      {selectedService.gallery.map((image, index) => (
                         <motion.figure
                           key={`${selectedService.number}-${image.src}-${index}`}
                           className={`services-portal-gallery-item services-portal-gallery-item-${index}`}
@@ -779,7 +891,7 @@ function ServicesSection() {
                           transition={{ duration: reduceMotion ? 0 : 0.58, delay: reduceMotion ? 0 : (index % 3) * 0.07 }}
                         >
                           <SmartImage src={image.src} alt={image.alt} />
-                          <figcaption className="mono">{String(index + 2).padStart(2, '0')}</figcaption>
+                          <figcaption className="mono">{String(index + 1).padStart(2, '0')}</figcaption>
                         </motion.figure>
                       ))}
                     </section>
@@ -909,6 +1021,7 @@ function BrandRail() {
 }
 function DestinationGallery() {
   const sectionRef = useRef<HTMLElement | null>(null)
+  const navigationRef = useRef<HTMLDivElement | null>(null)
   const reduceMotion = useReducedMotion()
   const isGalleryInView = useInView(sectionRef, { amount: 0.35 })
   const [current, setCurrent] = useState(0)
@@ -917,6 +1030,35 @@ function DestinationGallery() {
     const total = destinations.length
     setCurrent(((index % total) + total) % total)
   }, [])
+
+  useEffect(() => {
+    const navigation = navigationRef.current
+    if (!navigation) return
+
+    const keepSelectionVisible = () => {
+      if (navigation.scrollWidth <= navigation.clientWidth) return
+      const selected = navigation.querySelector<HTMLButtonElement>('[aria-current="true"]')
+      if (!selected) return
+
+      const viewport = navigation.getBoundingClientRect()
+      const button = selected.getBoundingClientRect()
+      const offset = button.left < viewport.left
+        ? button.left - viewport.left
+        : Math.max(0, button.right - viewport.right)
+
+      if (Math.abs(offset) > 1) {
+        navigation.scrollTo({
+          left: navigation.scrollLeft + offset,
+          behavior: reduceMotion ? 'instant' : 'smooth',
+        })
+      }
+    }
+
+    keepSelectionVisible()
+    const observer = new ResizeObserver(keepSelectionVisible)
+    observer.observe(navigation)
+    return () => observer.disconnect()
+  }, [current, reduceMotion])
 
   useEffect(() => {
     if (reduceMotion || !isGalleryInView) return
@@ -962,7 +1104,7 @@ function DestinationGallery() {
             aria-hidden="true"
           />
           <p className="section-copy">
-            Três expedições, diferentes paisagens e a mesma vontade de descobrir o Brasil de um jeito que poucos conhecem.
+            Cinco expedições, diferentes paisagens e a mesma vontade de descobrir novos lugares, no Brasil e no exterior.
           </p>
           <Link to="/expedicoes" className="text-link gallery-intro-link">
             Explorar todas as expedições <ArrowRight aria-hidden="true" size={18} />
@@ -971,68 +1113,104 @@ function DestinationGallery() {
       </div>
 
       <motion.div
-        className="gallery-stage"
-        initial={reduceMotion ? false : { opacity: 0.78, y: 24, scale: 0.992 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1 }}
+        className="gallery-showcase"
+        initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-80px' }}
-        transition={{ duration: reduceMotion ? 0 : 0.88, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: reduceMotion ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] }}
+        role="region"
+        aria-roledescription="carrossel"
+        aria-label="Expedições realizadas"
       >
-        {destinations.map((destination, index) => (
-          <motion.div
-            key={destination.image}
-            className="gallery-slide"
-            initial={false}
-            animate={{
-              opacity: index === current ? 1 : 0,
-              scale: index === current ? 1 : 1.025,
-              x: index === current ? '0%' : '1.5%',
-            }}
-            transition={{ duration: reduceMotion ? 0 : 0.9, ease: [0.16, 1, 0.3, 1] }}
-            style={{ zIndex: index === current ? 2 : 1, pointerEvents: index === current ? 'auto' : 'none' }}
-            drag={index === current && !reduceMotion ? 'x' : false}
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.08}
-            onDragEnd={(_, info) => {
-              if (info.offset.x < -60) selectDestination(current + 1)
-              if (info.offset.x > 60) selectDestination(current - 1)
-            }}
-          >
-            <SmartImage
-              src={destination.image}
-              alt={`${destination.name}, ${destination.state}`}
-              className="gallery-image"
-            />
-            <div className="gallery-shade" aria-hidden="true" />
-            <motion.div
-              className="wrap gallery-caption"
-              animate={{ opacity: index === current ? 1 : 0, y: index === current ? 0 : 18 }}
-              transition={{ duration: reduceMotion ? 0 : 0.6, delay: index === current ? 0.22 : 0 }}
-            >
-              <p className="mono gallery-edition">{destination.edition}</p>
-              <h3 className="display">{destination.name}</h3>
-              <p>{destination.state}</p>
-            </motion.div>
-          </motion.div>
-        ))}
+        <div className="gallery-stage">
+          <div className="gallery-info">
+            <div className="gallery-copy">
+              {destinations.map((destination, index) => (
+                <motion.div
+                  key={destination.name}
+                  className="gallery-caption"
+                  initial={false}
+                  animate={{ opacity: index === current ? 1 : 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.35 }}
+                  aria-hidden={index !== current}
+                >
+                  <p className="mono gallery-edition">{destination.edition}</p>
+                  <h3 className="display">{destination.name}</h3>
+                  <p className="gallery-location">{destination.state}</p>
+                </motion.div>
+              ))}
+            </div>
 
-        <button
-          type="button"
-          className="gallery-arrow gallery-arrow-left"
-          onClick={() => selectDestination(current - 1)}
-          aria-label="Mostrar destino anterior"
-        >
-          <ChevronLeft aria-hidden="true" size={24} />
-        </button>
-        <button
-          type="button"
-          className="gallery-arrow gallery-arrow-right"
-          onClick={() => selectDestination(current + 1)}
-          aria-label="Mostrar próximo destino"
-        >
-          <ChevronRight aria-hidden="true" size={24} />
-        </button>
+            <div className="gallery-controls">
+              <button
+                type="button"
+                className="gallery-arrow gallery-arrow-left"
+                onClick={() => selectDestination(current - 1)}
+                aria-label="Mostrar destino anterior"
+              >
+                <ChevronLeft aria-hidden="true" size={22} />
+              </button>
+              <button
+                type="button"
+                className="gallery-arrow gallery-arrow-right"
+                onClick={() => selectDestination(current + 1)}
+                aria-label="Mostrar próximo destino"
+              >
+                <ChevronRight aria-hidden="true" size={22} />
+              </button>
+              <span className="mono gallery-counter" aria-hidden="true">
+                <span>{String(current + 1).padStart(2, '0')}</span>
+                <span>/ {String(destinations.length).padStart(2, '0')}</span>
+              </span>
+            </div>
+          </div>
 
-        <div className="wrap gallery-navigation" role="group" aria-label="Selecionar destino">
+          <div className="gallery-photos">
+            {destinations.map((destination, index) => (
+              <motion.div
+                key={destination.name}
+                className="gallery-slide"
+                initial={false}
+                animate={{ opacity: index === current ? 1 : 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.5, ease: 'easeInOut' }}
+                style={{ zIndex: index === current ? 2 : 1, pointerEvents: index === current ? 'auto' : 'none' }}
+                aria-hidden={index !== current}
+                drag={index === current && !reduceMotion ? 'x' : false}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.05}
+                onDragEnd={(_, info) => {
+                  if (info.offset.x < -60) selectDestination(current + 1)
+                  if (info.offset.x > 60) selectDestination(current - 1)
+                }}
+              >
+                <SmartImage
+                  src={destination.image}
+                  alt={`${destination.name}, ${destination.state}`}
+                  className={`gallery-image ${destination.imageClassName ?? ''}`.trim()}
+                />
+              </motion.div>
+            ))}
+
+            {!reduceMotion && isGalleryInView && (
+              <div className="gallery-timer" aria-hidden="true">
+                <motion.span
+                  key={current}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: DESTINATION_AUTOPLAY_DURATION / 1000, ease: 'linear' }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div
+          ref={navigationRef}
+          className="gallery-navigation"
+          style={{ '--gallery-count': destinations.length } as CSSProperties}
+          role="group"
+          aria-label="Selecionar destino"
+        >
           {destinations.map((item, index) => (
             <button
               type="button"
@@ -1047,16 +1225,6 @@ function DestinationGallery() {
           ))}
         </div>
 
-        {!reduceMotion && isGalleryInView && (
-          <div className="gallery-timer" aria-hidden="true">
-            <motion.span
-              key={current}
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
-              transition={{ duration: DESTINATION_AUTOPLAY_DURATION / 1000, ease: 'linear' }}
-            />
-          </div>
-        )}
       </motion.div>
     </section>
   )

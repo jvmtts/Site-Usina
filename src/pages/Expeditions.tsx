@@ -20,10 +20,7 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Clock3,
   Images,
-  MapPin,
-  Users,
   X,
 } from 'lucide-react'
 import './Expeditions.css'
@@ -36,10 +33,12 @@ interface Expedition {
   state: string
   dateLabel: string
   duration: string
-  spots: number
+  spots?: number
   description: string
   coverImage: string
-  galleryImages: string[]
+  coverImageAlt?: string
+  showCoverTitle?: boolean
+  galleryImages: [string, ...string[]]
 }
 
 interface HeroSlide {
@@ -50,26 +49,7 @@ interface HeroSlide {
   position?: string
 }
 
-interface CountdownValue {
-  days: number
-  hours: number
-  minutes: number
-  ended: boolean
-}
-
 const HERO_AUTOPLAY_DURATION = 6_800
-
-const UPCOMING_EXPEDITION = {
-  destination: 'Campos do Jordão',
-  date: '21–23 de agosto de 2026',
-  countdownDate: '2026-08-21T08:00:00-03:00',
-  duration: '3 dias',
-  availability: '7 vagas',
-  price: 'R$ 3.800',
-  image: '/images/Expedi%C3%A7%C3%A3o4.jpeg',
-  detailsPath: '/expedicoes/campos-do-jordao-2026',
-  registrationPath: '/expedicoes/campos-do-jordao-2026/inscricao',
-}
 
 const EXPEDITIONS: Expedition[] = [
   {
@@ -143,6 +123,28 @@ const EXPEDITIONS: Expedition[] = [
       '/images/S%C3%A3o-Sebasti%C3%A3o/FOTO%208.webp',
     ],
   },
+  {
+    id: 'campos-do-jordao-2026',
+    sequenceLabel: 'Quarta expedição',
+    destination: 'Campos do Jordão',
+    shortDestination: 'Campos do Jordão',
+    state: 'São Paulo',
+    dateLabel: '21–23 de agosto de 2026',
+    duration: '3 dias',
+    description:
+      'Em agosto de 2026, a Usina foi para a Serra da Mantiqueira. Foram três dias em Campos do Jordão, com trilhas, paisagens de serra e o acompanhamento da equipe.',
+    coverImage: '/images/Expedi%C3%A7%C3%A3o4.jpeg',
+    coverImageAlt: 'Arquitetura e iluminação do centro de Campos do Jordão',
+    showCoverTitle: true,
+    galleryImages: ['/images/Expedi%C3%A7%C3%A3o4.jpeg',
+                    'images/Campos/image1.png',
+                    'images/Campos/image2.png',
+                    'images/Campos/image3.png',
+                    'images/Campos/image4.png',
+                    'images/Campos/image5.png',
+                    'images/Campos/image6.png',
+    ],
+  },
 ]
 
 const HERO_SLIDES: HeroSlide[] = [
@@ -189,34 +191,6 @@ const HERO_SLIDES: HeroSlide[] = [
     position: 'center 46%',
   },
 ]
-
-function getCountdown(target: string): CountdownValue {
-  const difference = new Date(target).getTime() - Date.now()
-
-  if (!Number.isFinite(difference) || difference <= 0) {
-    return { days: 0, hours: 0, minutes: 0, ended: true }
-  }
-
-  return {
-    days: Math.floor(difference / 86_400_000),
-    hours: Math.floor((difference % 86_400_000) / 3_600_000),
-    minutes: Math.floor((difference % 3_600_000) / 60_000),
-    ended: false,
-  }
-}
-
-function useCountdown(target: string) {
-  const [countdown, setCountdown] = useState(() => getCountdown(target))
-
-  useEffect(() => {
-    const update = () => setCountdown(getCountdown(target))
-    update()
-    const timer = window.setInterval(update, 30_000)
-    return () => window.clearInterval(timer)
-  }, [target])
-
-  return countdown
-}
 
 function Reveal({
   children,
@@ -356,7 +330,7 @@ function ExpeditionHero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.7, delay: reduceMotion ? 0 : 0.92 }}
         >
-          Travessias acompanhadas por paisagens que só a água consegue revelar.
+          Expedições por mar e por terra, com a equipe por perto em cada etapa do caminho.
         </motion.p>
       </div>
 
@@ -435,7 +409,7 @@ function ExpeditionChapter({
   const actionY = useTransform(smoothProgress, [0.52, 0.78], [8, 0])
 
   return (
-    <article className="exp-chapter" aria-label={`Expedição ${expedition.destination}`}>
+    <article className={`exp-chapter${expedition.showCoverTitle ? ' exp-chapter-with-caption' : ''}`} aria-label={`Expedição ${expedition.destination}`}>
       <div ref={mediaRef} className="exp-chapter-media">
         <button
           type="button"
@@ -452,7 +426,7 @@ function ExpeditionChapter({
             >
               <img
                 src={expedition.coverImage}
-                alt={`Participantes da expedição ${expedition.destination}`}
+                alt={expedition.coverImageAlt ?? `Participantes da expedição ${expedition.destination}`}
                 loading="lazy"
                 decoding="async"
                 draggable={false}
@@ -460,6 +434,12 @@ function ExpeditionChapter({
             </motion.span>
             <span className="exp-chapter-image-shade" aria-hidden="true" />
           </motion.span>
+          {expedition.showCoverTitle && (
+            <span className="exp-chapter-cover-caption">
+              <span className="mono">Expedição realizada · {expedition.dateLabel}</span>
+              <strong className="display">{expedition.destination}</strong>
+            </span>
+          )}
           <motion.span
             className="exp-chapter-media-action"
             style={reduceMotion ? undefined : { opacity: actionOpacity, y: actionY }}
@@ -490,8 +470,8 @@ function ExpeditionStories({ onOpen }: { onOpen: (expedition: Expedition) => voi
               aria-hidden="true"
             />
             <p>
-              Três trajetos, diferentes paisagens e o mesmo cuidado em cada quilômetro.
-              Abra uma rota para ver o relato e as fotografias da viagem.
+              Do mar à serra, diferentes paisagens e o mesmo cuidado em cada quilômetro.
+              Abra uma rota para conhecer os detalhes e ver as imagens.
             </p>
           </div>
         </Reveal>
@@ -505,134 +485,6 @@ function ExpeditionStories({ onOpen }: { onOpen: (expedition: Expedition) => voi
             />
           ))}
         </div>
-      </div>
-    </section>
-  )
-}
-
-function AnimatedNumber({ value }: { value: number }) {
-  const reduceMotion = useReducedMotion()
-  const formattedValue = String(value).padStart(2, '0')
-
-  return (
-    <span className="exp-countdown-value" aria-label={String(value)}>
-      <AnimatePresence mode="popLayout" initial={false}>
-        <motion.span
-          key={formattedValue}
-          aria-hidden="true"
-          initial={reduceMotion ? false : { y: '55%', opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={reduceMotion ? undefined : { y: '-55%', opacity: 0 }}
-          transition={{ duration: reduceMotion ? 0 : 0.34, ease: [0.16, 1, 0.3, 1] }}
-        >
-          {formattedValue}
-        </motion.span>
-      </AnimatePresence>
-    </span>
-  )
-}
-
-function Countdown({ target }: { target: string }) {
-  const countdown = useCountdown(target)
-
-  if (countdown.ended) {
-    return <p className="exp-countdown-ended">Consulte a próxima data com nossa equipe.</p>
-  }
-
-  const units = [
-    { label: 'Dias', value: countdown.days },
-    { label: 'Horas', value: countdown.hours },
-    { label: 'Minutos', value: countdown.minutes },
-  ]
-
-  return (
-    <div className="exp-countdown" aria-label="Contagem regressiva para a expedição">
-      {units.map((unit) => (
-        <div className="exp-countdown-unit" key={unit.label}>
-          <AnimatedNumber value={unit.value} />
-          <span className="mono exp-countdown-label">{unit.label}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function UpcomingExpedition() {
-  const facts = [
-    { icon: MapPin, label: 'Destino', value: `${UPCOMING_EXPEDITION.destination}, SP` },
-    { icon: Clock3, label: 'Duração', value: UPCOMING_EXPEDITION.duration },
-    { icon: Users, label: 'Disponibilidade', value: UPCOMING_EXPEDITION.availability },
-  ]
-
-  return (
-    <section className="exp-upcoming" aria-labelledby="upcoming-heading">
-      <div className="wrap">
-        <Reveal className="exp-upcoming-heading">
-          <div>
-            <span className="mono exp-kicker">Próxima partida</span>
-            <h2 id="upcoming-heading" className="display">A próxima história já tem destino.</h2>
-          </div>
-          <div className="exp-section-summary">
-            <img
-              className="exp-section-logo"
-              src="/images/Usina-logo-Preto.png"
-              alt=""
-              aria-hidden="true"
-            />
-            <p>
-              Campos do Jordão ganha sua própria experiência. Veja o essencial por aqui ou
-              abra a página da expedição para conhecer o roteiro completo.
-            </p>
-          </div>
-        </Reveal>
-
-        <Reveal className="exp-upcoming-card" delay={0.08}>
-          <div className="exp-upcoming-media">
-            <img
-              src={UPCOMING_EXPEDITION.image}
-              alt="Campos do Jordão, próxima expedição da Usina do Jet"
-              loading="lazy"
-              decoding="async"
-            />
-            <span className="mono exp-upcoming-status"><i aria-hidden="true" />Vagas abertas</span>
-            <div className="exp-upcoming-media-caption">
-              <span className="mono">Serra da Mantiqueira · São Paulo</span>
-              <h3 className="display">Campos do Jordão</h3>
-            </div>
-          </div>
-
-          <div className="exp-upcoming-content">
-            <div className="exp-upcoming-date">
-              <span className="mono">{UPCOMING_EXPEDITION.date}</span>
-              <strong>A expedição começa em</strong>
-            </div>
-
-            <Countdown target={UPCOMING_EXPEDITION.countdownDate} />
-
-            <dl className="exp-upcoming-facts">
-              {facts.map(({ icon: Icon, label, value }) => (
-                <div key={label}>
-                  <dt><Icon size={16} strokeWidth={1.8} aria-hidden="true" /><span className="mono">{label}</span></dt>
-                  <dd>{value}</dd>
-                </div>
-              ))}
-              <div className="exp-upcoming-price">
-                <dt className="mono">Investimento</dt>
-                <dd>{UPCOMING_EXPEDITION.price}</dd>
-                <small>por pessoa</small>
-              </div>
-            </dl>
-
-            <div className="exp-upcoming-actions">
-              <Link className="exp-button exp-button-dark" to={UPCOMING_EXPEDITION.detailsPath}>
-                Conhecer o roteiro <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-              <Link className="exp-text-link" to={UPCOMING_EXPEDITION.registrationPath}>
-                Ir direto para a inscrição <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-        </Reveal>
       </div>
     </section>
   )
@@ -675,6 +527,7 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
   const scrollLockReleasedRef = useRef(false)
   const reduceMotion = useReducedMotion()
   const images = expedition.galleryImages
+  const hasGallery = images.length > 1
 
   const navigate = useCallback((direction: number) => {
     setImageIndex((current) => (current + direction + images.length) % images.length)
@@ -693,6 +546,8 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
   }, [onClose, releaseScrollLock])
 
   useEffect(() => {
+    if (!hasGallery) return
+
     const neighbors = [
       images[(imageIndex + 1) % images.length],
       images[(imageIndex - 1 + images.length) % images.length],
@@ -701,7 +556,7 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
       const preload = new Image()
       preload.src = src
     })
-  }, [imageIndex, images])
+  }, [hasGallery, imageIndex, images])
 
   useEffect(() => {
     previousBodyOverflowRef.current = document.body.style.overflow
@@ -712,8 +567,8 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') requestClose()
-      if (event.key === 'ArrowLeft') navigate(-1)
-      if (event.key === 'ArrowRight') navigate(1)
+      if (hasGallery && event.key === 'ArrowLeft') navigate(-1)
+      if (hasGallery && event.key === 'ArrowRight') navigate(1)
 
       if (event.key === 'Tab' && dialogRef.current) {
         const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>(
@@ -741,7 +596,7 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
       window.removeEventListener('keydown', handleKeyDown)
       previouslyFocusedRef.current?.focus({ preventScroll: true })
     }
-  }, [navigate, releaseScrollLock, requestClose])
+  }, [hasGallery, navigate, releaseScrollLock, requestClose])
 
   return (
     <motion.div
@@ -772,17 +627,21 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
         <dl>
           <div><dt className="mono">Destino</dt><dd>{expedition.state}</dd></div>
           <div><dt className="mono">Duração</dt><dd>{expedition.duration}</dd></div>
-          <div><dt className="mono">Grupo</dt><dd>{expedition.spots} participantes</dd></div>
+          {expedition.spots !== undefined && (
+            <div><dt className="mono">Grupo</dt><dd>{expedition.spots} participantes</dd></div>
+          )}
         </dl>
-        <div className="exp-dialog-count">
-          <span className="mono">Fotografia</span>
-          <strong>{String(imageIndex + 1).padStart(2, '0')}</strong>
-          <small>/ {String(images.length).padStart(2, '0')}</small>
-        </div>
+        {hasGallery && (
+          <div className="exp-dialog-count">
+            <span className="mono">Fotografia</span>
+            <strong>{String(imageIndex + 1).padStart(2, '0')}</strong>
+            <small>/ {String(images.length).padStart(2, '0')}</small>
+          </div>
+        )}
       </motion.aside>
 
       <motion.div
-        className="exp-dialog-gallery"
+        className={`exp-dialog-gallery${hasGallery ? '' : ' exp-dialog-gallery-single'}`}
         initial={reduceMotion ? false : { opacity: 0, scale: 1.025 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: reduceMotion ? 0 : 0.72, delay: reduceMotion ? 0 : 0.18, ease: [0.16, 1, 0.3, 1] }}
@@ -794,7 +653,7 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
               src={images[imageIndex]}
               alt={`${expedition.destination}, fotografia ${imageIndex + 1} de ${images.length}`}
               draggable={false}
-              drag={reduceMotion ? false : 'x'}
+              drag={reduceMotion || !hasGallery ? false : 'x'}
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.16}
               onDragEnd={(_, info) => {
@@ -808,28 +667,34 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
               transition={{ duration: reduceMotion ? 0 : 0.38, ease: [0.16, 1, 0.3, 1] }}
             />
           </AnimatePresence>
-          <button type="button" className="exp-dialog-arrow is-left" onClick={() => navigate(-1)} aria-label="Fotografia anterior">
-            <ChevronLeft size={24} aria-hidden="true" />
-          </button>
-          <button type="button" className="exp-dialog-arrow is-right" onClick={() => navigate(1)} aria-label="Próxima fotografia">
-            <ChevronRight size={24} aria-hidden="true" />
-          </button>
+          {hasGallery && (
+            <>
+            <button type="button" className="exp-dialog-arrow is-left" onClick={() => navigate(-1)} aria-label="Fotografia anterior">
+              <ChevronLeft size={24} aria-hidden="true" />
+            </button>
+            <button type="button" className="exp-dialog-arrow is-right" onClick={() => navigate(1)} aria-label="Próxima fotografia">
+              <ChevronRight size={24} aria-hidden="true" />
+            </button>
+            </>
+          )}
         </div>
 
-        <div className="exp-dialog-thumbnails" aria-label="Selecionar fotografia">
-          {images.map((image, index) => (
-            <button
-              key={image}
-              type="button"
-              className={index === imageIndex ? 'is-active' : undefined}
-              onClick={() => setImageIndex(index)}
-              aria-label={`Abrir fotografia ${index + 1}`}
-              aria-pressed={index === imageIndex}
-            >
-              <img src={image} alt="" loading="lazy" draggable={false} />
-            </button>
-          ))}
-        </div>
+        {hasGallery && (
+          <div className="exp-dialog-thumbnails" aria-label="Selecionar fotografia">
+            {images.map((image, index) => (
+              <button
+                key={image}
+                type="button"
+                className={index === imageIndex ? 'is-active' : undefined}
+                onClick={() => setImageIndex(index)}
+                aria-label={`Abrir fotografia ${index + 1}`}
+                aria-pressed={index === imageIndex}
+              >
+                <img src={image} alt="" loading="lazy" draggable={false} />
+              </button>
+            ))}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   )
@@ -843,7 +708,6 @@ export default function Expeditions() {
       <ExpeditionHero />
 
       <ExpeditionStories onOpen={setSelectedExpedition} />
-      <UpcomingExpedition />
       <FutureRoute />
 
       <AnimatePresence>
