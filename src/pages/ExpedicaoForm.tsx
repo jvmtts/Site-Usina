@@ -1,15 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, ArrowRight, Plus, Minus, Trash2, Check,
   User, ChevronDown, Upload, X, AlertCircle
 } from 'lucide-react'
-import { REGISTRATION_SECTION_ID } from '../config/routes'
 
-const FORMULARIO_IMAGE_ROOT = '/images/Formulario'
-const FORM_BACKGROUND_IMAGE = `${FORMULARIO_IMAGE_ROOT}/CamposFormulario.png`
-const USINA_WHITE_LOGO = `${FORMULARIO_IMAGE_ROOT}/logo%20usina%201000px%20x%201000px.png`
-const ALISSON_LOGO = `${FORMULARIO_IMAGE_ROOT}/logo%20alisson%201000px%20x%201000px.png`
+import { EXPEDITION_PATH, REGISTRATION_SECTION_ID } from '../config/routes'
+import './ExpedicaoFlow.css'
+
+const FORM_HERO_IMAGE = '/images/Formulario/MonteVerde.png'
+const BASIN_ENDPOINT = 'https://usebasin.com/f/52f4bd4c726f'
+const PROTOCOL_REQUEST_KEY = 'usina:monte-verde-2026:protocolo:solicitacao'
+const SUBMISSION_TIMEOUT_MS = 180_000
+const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 /* ── Tipos ───────────────────────────────────────────────────────── */
 interface Acompanhante {
@@ -784,16 +788,19 @@ export default function ExpedicaoForm() {
   const [data, setData]       = useState<DadosFormulario>(initialData)
   const [enviado, setEnviado] = useState(false)
   const [enviando, setEnviando] = useState(false)
-  const [erroEnvio, setErroEnvio] = useState(false)
+  const [erroEnvio, setErroEnvio] = useState('')
+  const [protocolo, setProtocolo] = useState('')
   const [erroValidacao, setErroValidacao] = useState('')
   const [errors, setErrors] = useState<Errors>({})
   const [shakeNonce, setShakeNonce] = useState(0)
   const topRef = useRef<HTMLDivElement>(null)
   const fieldRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const requestIdRef = useRef('')
+  const submittingRef = useRef(false)
 
   // SCROLL FIX: Joga a tela pro topo sempre que a página for aberta
   useEffect(() => {
-    window.scrollTo(0, 0)
+    if (!window.location.hash) window.scrollTo(0, 0)
   }, [])
 
   const set = (field: keyof DadosFormulario, value: unknown) =>
@@ -908,7 +915,7 @@ export default function ExpedicaoForm() {
     }
 
     if (data.temVeiculo === 'sim') {
-      if (!data.modeloVeiculo.trim() || data.modeloVeiculo.trim().length < 2) e.modeloVeiculo = 'Informe o modelo do UTV ou Quadriciclo.'
+      if (!data.modeloVeiculo.trim() || data.modeloVeiculo.trim().length < 2) e.modeloVeiculo = 'Informe o modelo do UTV, Quadriciclo ou 4x4.'
       const anoNum = parseInt(data.anoVeiculo, 10)
       const anoAtual = new Date().getFullYear()
       if (data.anoVeiculo.length !== 4 || isNaN(anoNum) || anoNum < 1980 || anoNum > anoAtual + 1) e.anoVeiculo = 'Informe um ano de fabricação válido.'
@@ -954,10 +961,12 @@ export default function ExpedicaoForm() {
 
   const prevStep = () => { setErrors({}); setErroValidacao(''); setStep(p => p - 1); scrollTop() }
 
-  /* ── Envio para o Formspree ──────────────────────────────────── */
+  /* ── Envio para o Basin ──────────────────────────────────────── */
   // Monta os campos de texto (sempre enviados)
-  const montarCamposTexto = (formData: FormData) => {
-    formData.append('_subject', `Nova inscrição — ${data.nome} (Campos do Jordão)`)
+  const montarCamposTexto = (formData: FormData, numeroProtocolo: string) => {
+    formData.append('_subject', `Nova inscrição ${numeroProtocolo} — ${data.nome} (Expedição Monte Verde 2026)`)
+    formData.append('Protocolo da inscrição', numeroProtocolo)
+    formData.append('Evento', 'Expedição Monte Verde — 6 a 8 de novembro de 2026')
 
     formData.append('Tipo de Inscrição', data.tipoInscricao === 'individual' ? 'Piloto Individual' : 'Piloto + Acompanhante')
     formData.append('Nome', data.nome)
@@ -1012,15 +1021,49 @@ export default function ExpedicaoForm() {
     }
   }
 
-  const BASIN_ENDPOINT = 'https://usebasin.com/f/80e03fc53775'
-
   const handleEnviar = async () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     setEnviando(true)
-    setErroEnvio(false)
+    setErroEnvio('')
+
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), SUBMISSION_TIMEOUT_MS)
+    let failureStage: 'protocol' | 'basin' = 'protocol'
 
     try {
+      let requestId = requestIdRef.current
+      if (!requestId) {
+        try {
+          requestId = window.sessionStorage.getItem(PROTOCOL_REQUEST_KEY) || ''
+        } catch {
+          requestId = ''
+        }
+      }
+      if (!REQUEST_ID_PATTERN.test(requestId)) requestId = crypto.randomUUID()
+      requestIdRef.current = requestId
+      try {
+        window.sessionStorage.setItem(PROTOCOL_REQUEST_KEY, requestId)
+      } catch {
+        // A referência em memória preserva o identificador durante esta visita.
+      }
+
+      const protocolResponse = await fetch('/api/protocol', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+        signal: controller.signal,
+      })
+      if (!protocolResponse.ok) throw new Error('Falha ao gerar protocolo')
+      const protocolBody = await protocolResponse.json() as { protocol?: unknown }
+      if (typeof protocolBody.protocol !== 'string' || !/^\d{3,}$/.test(protocolBody.protocol)) {
+        throw new Error('Protocolo inválido')
+      }
+      const numeroProtocolo = protocolBody.protocol
+
+      failureStage = 'basin'
       const formData = new FormData()
-      montarCamposTexto(formData)
+      montarCamposTexto(formData, numeroProtocolo)
       if (data.docCnh) formData.append('Documento CNH', data.docCnh)
       if (data.docVeiculo) formData.append('Documento do Veículo', data.docVeiculo)
 
@@ -1028,17 +1071,29 @@ export default function ExpedicaoForm() {
         method: 'POST',
         body: formData,
         headers: { Accept: 'application/json' },
+        signal: controller.signal,
       })
 
       if (!resp.ok) throw new Error('Falha no envio')
 
-      setEnviando(false)
+      setProtocolo(numeroProtocolo)
       setEnviado(true)
+      requestIdRef.current = ''
+      try {
+        window.sessionStorage.removeItem(PROTOCOL_REQUEST_KEY)
+      } catch {
+        // A inscrição foi enviada; a limpeza local é opcional.
+      }
       scrollTop()
     } catch (err) {
       console.error(err)
+      setErroEnvio(failureStage === 'protocol'
+        ? 'Não foi possível gerar o protocolo agora. Verifique sua conexão e tente novamente.'
+        : 'Não foi possível enviar sua inscrição. Verifique sua conexão e tente novamente.')
+    } finally {
+      window.clearTimeout(timeoutId)
+      submittingRef.current = false
       setEnviando(false)
-      setErroEnvio(true)
     }
   }
 
@@ -1061,7 +1116,10 @@ export default function ExpedicaoForm() {
             </motion.div>
           </div>
           <motion.h2 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35, ease: [0.16, 1, 0.3, 1] }} style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 'clamp(2rem,5vw,3rem)', color: '#0A0A0A', lineHeight: 0.95, letterSpacing: '-0.025em', marginBottom: '1.25rem' }}>INSCRIÇÃO ENVIADA!</motion.h2>
-          <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }} style={{ color: '#777', fontSize: '1rem', lineHeight: 1.8, marginBottom: '2rem' }}>Recebemos sua inscrição para a expedição de <strong style={{ color: '#0A0A0A' }}>Campos do Jordão</strong>. Nossa equipe entrará em contato em breve com os detalhes e o valor final conforme o número de acompanhantes.</motion.p>
+          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#777', marginBottom: '0.35rem' }}>Seu protocolo</p>
+          <p aria-label={`Protocolo ${protocolo}`} style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 'clamp(2rem,5vw,3rem)', color: '#FF7B00', lineHeight: 1, marginBottom: '0.5rem' }}>{protocolo}</p>
+          <p style={{ fontSize: '0.85rem', color: '#777', marginBottom: '1.5rem' }}>Guarde este número para identificar sua inscrição.</p>
+          <motion.p initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }} style={{ color: '#777', fontSize: '1rem', lineHeight: 1.8, marginBottom: '2rem' }}>Recebemos sua inscrição para a <strong style={{ color: '#0A0A0A' }}>Expedição Monte Verde</strong>, de 6 a 8 de novembro de 2026. Nossa equipe entrará em contato em breve com os detalhes e o valor final conforme o número de acompanhantes.</motion.p>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.75 }} style={{ fontFamily: "'Space Mono', monospace", fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: '#BBB' }}>Você já pode fechar esta guia</motion.p>
         </motion.div>
       </div>
@@ -1069,81 +1127,60 @@ export default function ExpedicaoForm() {
   }
 
   return (
-    <div style={{ background: '#fff', minHeight: '100vh' }} ref={topRef}>
+    <div className="monte-verde-registration" style={{ background: '#fff', minHeight: '100vh' }}>
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section style={{ position: 'relative', paddingTop: 'clamp(8.5rem,16vh,10rem)', paddingBottom: 'clamp(3.5rem,7vh,5rem)', overflow: 'hidden', background: '#0A0A0A', minHeight: 'clamp(540px,72svh,680px)', display: 'flex', alignItems: 'center' }}>
+      <section className="form-poster-hero" aria-labelledby="monte-verde-form-title">
+        <h1 id="monte-verde-form-title" className="sr-only">Inscrição para a Expedição Monte Verde, de 6 a 8 de novembro de 2026</h1>
         <div style={{ position: 'absolute', inset: 0 }}>
-          <img src={FORM_BACKGROUND_IMAGE} alt="Campos do Jordão" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35 }} />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(10,10,10,0.98) 0%, rgba(10,10,10,0.5) 60%, rgba(10,10,10,0.15) 100%)' }} />
+          <img
+            src={FORM_HERO_IMAGE}
+            alt="Expedição Monte Verde"
+            className="form-poster-hero__image"
+            loading="eager"
+            fetchPriority="high"
+          />
+          <div className="form-poster-hero__shade" />
         </div>
+
+        <Link
+          to={EXPEDITION_PATH}
+          className="mono"
+          style={{
+            position: 'absolute', top: 'clamp(1.25rem, 3vh, 2rem)', left: 'clamp(1.25rem, 4vw, 2.5rem)', zIndex: 2,
+            display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.6)',
+            fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase' as const, textDecoration: 'none',
+            transition: 'color 0.2s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.6)' }}
+        >
+          <ArrowLeft size={13} /> Sobre a expedição
+        </Link>
 
         <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '1400px', margin: '0 auto', padding: '0 clamp(1.5rem, 5vw, 7rem)', display: 'flex', justifyContent: 'center' }}>
           
-          {/* Container Flex para alinhar Logo Esquerda, Texto e Logo Direita */}
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 'clamp(1.5rem, 4vw, 3rem)', justifyContent: 'center', width: '100%' }}>
+          {/* Os logos permanecem com os mesmos tamanhos e nas mesmas extremidades */}
+          <div className="form-poster-hero__brands">
             
             {/* Logo da Usina do Jet animado */}
             <motion.img 
               initial={{ opacity: 0, scale: 0.9, x: -40 }} 
               animate={{ opacity: 1, scale: 1, x: 0 }} 
               transition={{ duration: 0.9, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              src={USINA_WHITE_LOGO}
+              src="/images/Formulario/logo%20usina%201000px%20x%201000px.png"
               alt="Usina do Jet" 
               style={{ width: 'clamp(140px, 20vw, 220px)', height: 'auto', objectFit: 'contain', flexShrink: 0 }} 
             />
 
-            {/* Bloco de Texto Atualizado - Efeito Sanduíche Laranja com Over-title Maior */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <motion.h2 
-                initial={{ opacity: 0, y: 15 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }} 
-                style={{ 
-                  fontFamily: "'Space Mono', monospace", 
-                  fontWeight: 700, 
-                  fontSize: 'clamp(1.1rem, 3.5vw, 1.8rem)', 
-                  letterSpacing: '0.15em', 
-                  textTransform: 'uppercase', 
-                  color: '#ff7b29', 
-                  margin: '0 0 0.5rem 0' 
-                }}
-              >
-                EXPEDIÇÃO - OFF ROAD
-              </motion.h2>
-              
-              <motion.h1 
-                initial={{ opacity: 0, y: 32 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }} 
-                style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: 'clamp(2.5rem, 7vw, 5.5rem)', color: '#fff', lineHeight: 1.1, letterSpacing: '-0.025em', margin: 0 }}
-              >
-                CAMPOS DO<br />JORDÃO
-              </motion.h1>
-              
-              <motion.p 
-                initial={{ opacity: 0 }} 
-                animate={{ opacity: 1 }} 
-                transition={{ duration: 0.6, delay: 0.4 }} 
-                style={{ 
-                  color: '#ff7b29', 
-                  fontWeight: 600, 
-                  fontSize: '1.05rem', 
-                  marginTop: '1.25rem', 
-                  fontFamily: "'Inter', sans-serif", 
-                  textShadow: '0 2px 4px rgba(0,0,0,0.5)' 
-                }}
-              >
-                São Paulo · 21–28 Ago 2026
-              </motion.p>
-            </div>
+            <div className="form-poster-hero__clearance" aria-hidden />
 
             {/* Logo do Alisson Guedes Jet animado */}
             <motion.img 
               initial={{ opacity: 0, scale: 0.9, x: 40 }} 
               animate={{ opacity: 1, scale: 1, x: 0 }} 
               transition={{ duration: 0.9, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              src={ALISSON_LOGO}
+              src="/images/Formulario/logo%20alisson%201000px%20x%201000px.png"
               alt="Alisson Guedes Jet" 
               style={{ width: 'clamp(170px, 26vw, 270px)', height: 'auto', objectFit: 'contain', flexShrink: 0 }} 
             />
@@ -1152,16 +1189,18 @@ export default function ExpedicaoForm() {
         </div>
       </section>
 
+      <section className="form-event-strip" aria-label="Identificação do formulário">
+        <div className="form-event-strip__inner">
+          <strong className="mono">Expedição Monte Verde</strong>
+          <span className="form-event-strip__divider" aria-hidden />
+          <span>06 · 08 NOV 2026</span>
+          <span className="form-event-strip__detail">Monte Verde · Saída de São Paulo</span>
+        </div>
+      </section>
+
       {/* ── FORMULÁRIO ───────────────────────────────────────── */}
-      <section
-        id={REGISTRATION_SECTION_ID}
-        aria-label="Formulário de inscrição"
-        style={{
-          padding: 'clamp(3rem,6vh,5rem) clamp(1.5rem,5vw,7rem) clamp(6rem,10vh,8rem)',
-          scrollMarginTop: '6rem',
-        }}
-      >
-        <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+      <section id={REGISTRATION_SECTION_ID} className="monte-verde-form-fields" aria-label="Formulário de inscrição" style={{ padding: 'clamp(3rem,6vh,5rem) clamp(1.5rem,5vw,7rem) clamp(6rem,10vh,8rem)', scrollMarginTop: '6rem' }}>
+        <div ref={topRef} style={{ maxWidth: '720px', margin: '0 auto', scrollMarginTop: '6rem' }}>
 
           <div style={{ marginBottom: '3rem' }}>
             <StepIndicator current={step} />
@@ -1344,10 +1383,10 @@ export default function ExpedicaoForm() {
 
                 {/* Pergunta inicial */}
                 <div style={{ marginBottom: '2rem' }} ref={el => { fieldRefs.current['temVeiculo'] = el }}>
-                  <p style={{ ...labelStyle, marginBottom: '1rem' }}>Você tem UTV ou Quadriciclo? {requiredStar}</p>
+                  <p style={{ ...labelStyle, marginBottom: '1rem' }}>Você tem UTV, Quadriciclo ou 4x4? {requiredStar}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
                     {[
-                      { value: 'sim', label: 'Sim, tenho UTV/Quadriciclo', sub: 'Vou levar meu próprio veículo' },
+                      { value: 'sim', label: 'Sim, tenho veículo próprio', sub: 'Vou levar meu UTV, Quadriciclo ou 4x4' },
                       { value: 'nao', label: 'Não, preciso alugar um', sub: 'Nossa equipe vai te orientar sobre a locação' },
                     ].map(opt => (
                       <button key={opt.value} type="button" onClick={() => { set('temVeiculo', opt.value); setErrors(p => ({ ...p, temVeiculo: '' })) }} style={{ padding: '1.25rem', cursor: 'pointer', textAlign: 'left', transition: 'all 0.25s', border: `2px solid ${data.temVeiculo === opt.value ? '#FF7B00' : errors.temVeiculo ? '#ef4444' : '#EBEBEB'}`, background: data.temVeiculo === opt.value ? 'rgba(255,123,0,0.05)' : '#fff' }}>
@@ -1386,15 +1425,15 @@ export default function ExpedicaoForm() {
                   {data.temVeiculo === 'sim' && (
                     <motion.div key="veiculo-fields" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }} style={{ overflow: 'hidden' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <Field label="Modelo do UTV ou Quadriciclo" required error={errors.modeloVeiculo} fieldRef={el => { fieldRefs.current['modeloVeiculo'] = el }}>
-                          <Input value={data.modeloVeiculo} onChange={v => set('modeloVeiculo', v)} placeholder="Ex: Can-Am Maverick X3" error={!!errors.modeloVeiculo} shakeNonce={shakeNonce} />
+                        <Field label="Modelo do UTV, Quadriciclo ou 4x4" required error={errors.modeloVeiculo} fieldRef={el => { fieldRefs.current['modeloVeiculo'] = el }}>
+                          <Input value={data.modeloVeiculo} onChange={v => set('modeloVeiculo', v)} placeholder="Ex: Can-Am Maverick X3 ou Toyota Hilux" error={!!errors.modeloVeiculo} shakeNonce={shakeNonce} />
                         </Field>
                         <Field label="Ano de Fabricação" required error={errors.anoVeiculo} fieldRef={el => { fieldRefs.current['anoVeiculo'] = el }}>
                           <Input value={data.anoVeiculo} onChange={v => set('anoVeiculo', v)} placeholder="Ex: 2023" mask="ano" error={!!errors.anoVeiculo} shakeNonce={shakeNonce} />
                         </Field>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-                        <FileInput label="Documento do UTV ou Quadriciclo" value={data.docVeiculo} onChange={f => set('docVeiculo', f)} />
+                        <FileInput label="Documento do veículo" value={data.docVeiculo} onChange={f => set('docVeiculo', f)} />
                       </div>
                     </motion.div>
                   )}
@@ -1486,7 +1525,6 @@ export default function ExpedicaoForm() {
                 </div>
               </motion.div>
             )}
-
             {/* ══ STEP 2 — Revisão ══════════════════════════════ */}
             {step === 2 && (
               <motion.div key="step2" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
@@ -1553,7 +1591,7 @@ export default function ExpedicaoForm() {
                 <AnimatePresence>
                   {erroEnvio && (
                     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ef4444', fontSize: '0.8rem', fontFamily: "'Inter', sans-serif", marginBottom: '1rem', justifyContent: 'flex-end' }}>
-                      <AlertCircle size={14} /> Não foi possível enviar sua inscrição. Verifique sua internet e tente novamente.
+                      <AlertCircle size={14} /> {erroEnvio}
                     </motion.div>
                   )}
                 </AnimatePresence>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { REGISTRATION_TARGET } from '../config/routes'
 
 const FORMULARIO_IMAGE_ROOT = '/images/Formulario'
 const USINA_WHITE_LOGO = `${FORMULARIO_IMAGE_ROOT}/logo%20usina%201000px%20x%201000px.png`
@@ -54,7 +55,7 @@ export default function TopBar() {
         </Link>
 
         <Link
-          to="/inscricao"
+          to={REGISTRATION_TARGET}
           className="btn-primary"
           style={{ padding: scrolled ? '0.7rem 1.5rem' : '0.9rem 1.9rem', fontSize: '0.68rem' }}
         >

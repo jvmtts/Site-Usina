@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUpRight, Menu, X } from 'lucide-react'
 import {
-  EXPEDITION_PATH,
   REGISTRATION_PATH,
   REGISTRATION_SECTION_ID,
   REGISTRATION_TARGET,
@@ -153,7 +152,6 @@ export default function Navbar({ revealed = true }: NavbarProps) {
   const isHero =
     location.pathname === '/' ||
     location.pathname === '/expedicoes' ||
-    location.pathname === EXPEDITION_PATH ||
     location.pathname === REGISTRATION_PATH ||
     location.pathname === '/inscricao'
   const transparent = isHero && !scrolled

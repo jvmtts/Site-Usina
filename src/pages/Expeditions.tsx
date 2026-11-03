@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react'
 import './Expeditions.css'
+import { EXPEDITION_PATH, REGISTRATION_TARGET } from '../config/routes'
 
 interface Expedition {
   id: string
@@ -490,27 +491,42 @@ function ExpeditionStories({ onOpen }: { onOpen: (expedition: Expedition) => voi
   )
 }
 
-function FutureRoute() {
+function UpcomingExpedition() {
   return (
-    <section className="exp-future" aria-labelledby="future-route-heading">
+    <section id="proxima-expedicao" className="exp-next" aria-labelledby="next-expedition-heading">
       <div className="wrap">
-        <Reveal className="exp-future-card">
-          <div className="exp-future-copy">
-            <span className="mono exp-kicker exp-kicker-light">No mapa da Usina</span>
-            <h2 id="future-route-heading" className="display">Florianópolis</h2>
+        <Reveal className="exp-next-card">
+          <div className="exp-next-copy">
+            <span className="mono exp-kicker">Próxima expedição</span>
+            <h2 id="next-expedition-heading" className="display">Monte Verde</h2>
             <p>
-              Uma nova rota está sendo desenhada. Quando os detalhes estiverem fechados,
-              você pode ser uma das primeiras pessoas a saber.
+              Um fim de semana nas trilhas de Monte Verde e região, com hospedagem,
+              refeições e a boa companhia de quem vai com você.
             </p>
-            <Link className="exp-button exp-button-light" to="/contato">
-              Quero receber novidades <ArrowRight size={18} aria-hidden="true" />
-            </Link>
+            <ul className="exp-next-tags" aria-label="Sobre a expedição">
+              <li>Off-road</li>
+              <li>Minas Gerais</li>
+              <li>UTV · Quadriciclo · 4x4</li>
+            </ul>
+            <div className="exp-next-actions">
+              <Link className="exp-button exp-next-primary" to={EXPEDITION_PATH}>
+                Conhecer a expedição <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+              <Link className="exp-button exp-button-light" to={REGISTRATION_TARGET}>
+                Fazer inscrição <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
-          <div className="exp-future-date" aria-label="Previsão para outubro de 2026">
-            <span className="mono">Previsão</span>
-            <strong className="display">OUT</strong>
-            <strong className="display">2026</strong>
-            <small className="mono">Data a confirmar</small>
+          <div className="exp-next-details">
+            <div className="exp-next-date" aria-label="De 6 a 8 de novembro de 2026">
+              <span className="mono">Reserve a data</span>
+              <strong className="display">06–08</strong>
+              <span className="mono">Novembro / 2026</span>
+            </div>
+            <div className="exp-next-price">
+              <span>Pacote casal</span>
+              <strong>R$ 5.590,00</strong>
+            </div>
           </div>
         </Reveal>
       </div>
@@ -708,7 +724,7 @@ export default function Expeditions() {
       <ExpeditionHero />
 
       <ExpeditionStories onOpen={setSelectedExpedition} />
-      <FutureRoute />
+      <UpcomingExpedition />
 
       <AnimatePresence>
         {selectedExpedition && (

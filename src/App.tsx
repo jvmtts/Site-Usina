@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import {
   BrowserRouter as Router,
   Link,
+  Navigate,
   Route,
   Routes,
   useLocation,
@@ -10,7 +11,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
-import { EXPEDITION_PATH, REGISTRATION_PATH } from './config/routes'
+import { EXPEDITION_PATH, REGISTRATION_PATH, REGISTRATION_TARGET } from './config/routes'
 import { scrollToSection } from './utils/scrollToSection'
 
 const Expeditions = lazy(() => import('./pages/Expeditions'))
@@ -143,9 +144,14 @@ function AnimatedRoutes({
               )}
             />
             <Route path="/expedicoes" element={<Expeditions />} />
-            <Route path={EXPEDITION_PATH} element={<ExpedicaoLanding />} />
+            <Route
+              path={EXPEDITION_PATH}
+              element={<ExpedicaoLanding registrationTarget={REGISTRATION_TARGET} imageRoot="/images/Formulario" standalone={false} />}
+            />
             <Route path={REGISTRATION_PATH} element={<ExpedicaoForm />} />
-            <Route path="/inscricao" element={<ExpedicaoForm />} />
+            <Route path="/inscricao" element={<Navigate to={REGISTRATION_TARGET} replace />} />
+            <Route path="/expedicoes/campos-do-jordao-2026" element={<Navigate to={EXPEDITION_PATH} replace />} />
+            <Route path="/expedicoes/campos-do-jordao-2026/inscricao" element={<Navigate to={REGISTRATION_TARGET} replace />} />
             <Route path="/catalogo/*" element={<Catalog />} />
             <Route path="/contato" element={<Contact />} />
             <Route path="*" element={<NotFound />} />

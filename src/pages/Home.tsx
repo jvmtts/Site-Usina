@@ -28,8 +28,8 @@ import { patrocinadores, type Patrocinador } from '../data/patrocinadores'
 import { produtos, type Produto } from '../data/produtos'
 import BrandIntro from '../components/BrandIntro'
 import HeroMedia from '../components/HeroMedia'
+import { EXPEDITION_PATH } from '../config/routes'
 
-const EXPEDITION_PATH = '/expedicoes/campos-do-jordao-2026'
 const DESTINATION_AUTOPLAY_DURATION = 10_000
 const activeBrands = patrocinadores.filter((brand) => brand.ativo)
 
@@ -88,6 +88,11 @@ interface ServiceDefinition {
   description: string
   story: string
   details: string[]
+  narrative?: {
+    eyebrow: string
+    title: string
+  }
+  titleSize?: 'compact'
   image: string
   imageAlt: string
   coverImage: ServiceImage
@@ -147,6 +152,10 @@ const services: ServiceDefinition[] = [
   {
     number: '01',
     title: 'Expedições náuticas',
+    narrative: {
+      eyebrow: 'Entre uma parada e outra',
+      title: 'O caminho também faz parte.',
+    },
     circleTitle: 'Expedições náuticas',
     eyebrow: 'Rotas que viram histórias',
     description: 'Roteiros acompanhados, estrutura de apoio e grupos reunidos para conhecer o Brasil por uma perspectiva diferente.',
@@ -163,6 +172,10 @@ const services: ServiceDefinition[] = [
   {
     number: '02',
     title: 'Corridas de jet',
+    narrative: {
+      eyebrow: 'Pilotos, equipes e bastidores',
+      title: 'Antes e depois da largada.',
+    },
     circleTitle: 'Corridas de jet',
     eyebrow: 'Velocidade com propósito',
     description: 'A energia das competições vista de perto, do preparo antes da largada aos encontros que acontecem fora da pista.',
@@ -179,6 +192,11 @@ const services: ServiceDefinition[] = [
   {
     number: '03',
     title: 'Cobertura de eventos nacionais e internacionais',
+    titleSize: 'compact',
+    narrative: {
+      eyebrow: 'Do palco aos bastidores',
+      title: 'O evento por outros ângulos.',
+    },
     circleTitle: 'Cobertura de eventos',
     eyebrow: 'Onde a cena acontece',
     description: 'Presença em eventos no Brasil e no exterior para transformar cada momento importante em imagem, contexto e memória.',
@@ -209,6 +227,10 @@ const services: ServiceDefinition[] = [
   {
     number: '05',
     title: 'Podcast Usina do Jet',
+    narrative: {
+      eyebrow: 'Gente que movimenta o jet',
+      title: 'Quem vive o jet tem o que contar.',
+    },
     circleTitle: 'Podcast Usina do Jet',
     eyebrow: 'Conversas sem pressa',
     description: 'Um espaço para ouvir quem movimenta o universo náutico e conhecer as histórias que normalmente ficam longe das câmeras.',
@@ -225,6 +247,11 @@ const services: ServiceDefinition[] = [
   {
     number: '06',
     title: 'Produtos e equipamentos',
+    titleSize: 'compact',
+    narrative: {
+      eyebrow: 'Equipamentos e acessórios',
+      title: 'Prepare a próxima saída.',
+    },
     circleTitle: 'Produtos e equipamentos',
     eyebrow: 'Escolhas para viver a água',
     description: 'Uma seleção de equipamentos, acessórios e peças para quem já vive o jet ou está preparando a próxima experiência.',
@@ -242,6 +269,10 @@ const services: ServiceDefinition[] = [
   {
     number: '07',
     title: 'Experiências especiais',
+    narrative: {
+      eyebrow: 'Experiências além da água',
+      title: 'Novos caminhos, boas companhias.',
+    },
     circleTitle: 'Experiências especiais',
     eyebrow: 'Do mar à terra',
     description: 'Encontros desenhados para viver novos lugares com presença, boa companhia e o cuidado que já faz parte da Usina.',
@@ -812,7 +843,10 @@ function ServicesSection() {
                   >
                     <span className="mono services-portal-detail-eyebrow">{selectedService.eyebrow}</span>
                     <span className="mono services-portal-detail-index">{selectedService.number}</span>
-                    <h3 id={`services-portal-title-${selectedService.number}`} className="display">
+                    <h3
+                      id={`services-portal-title-${selectedService.number}`}
+                      className={`display${selectedService.titleSize === 'compact' ? ' services-portal-title-compact' : ''}`}
+                    >
                       {selectedService.title}
                     </h3>
                     <p>{selectedService.description}</p>
@@ -821,11 +855,11 @@ function ServicesSection() {
                 </header>
 
                 <div className="services-portal-detail-body">
-                  {selectedService.kind !== 'reporting' && (
+                  {selectedService.narrative && (
                     <section className="services-portal-narrative" aria-label={`Sobre ${selectedService.title}`}>
                       <div>
-                        <span className="mono">Por dentro da Usina</span>
-                        <h4 className="display">Mais do que uma imagem.</h4>
+                        <span className="mono">{selectedService.narrative.eyebrow}</span>
+                        <h4 className="display">{selectedService.narrative.title}</h4>
                       </div>
                       <div className="services-portal-narrative-copy">
                         {selectedService.details.map((paragraph) => (
