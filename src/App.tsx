@@ -11,14 +11,13 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/Home'
-import { EXPEDITION_PATH, REGISTRATION_PATH, REGISTRATION_TARGET } from './config/routes'
+import { EXPEDITION_PATH, MONTE_VERDE_ARCHIVE, MONTE_VERDE_PATH, REGISTRATION_PATH } from './config/routes'
 import { scrollToSection } from './utils/scrollToSection'
 
 const Expeditions = lazy(() => import('./pages/Expeditions'))
 const Catalog = lazy(() => import('./pages/Catalog'))
 const Contact = lazy(() => import('./pages/Contact'))
-const ExpedicaoLanding = lazy(() => import('./pages/ExpedicaoLanding'))
-const ExpedicaoForm = lazy(() => import('./pages/ExpedicaoForm'))
+const UpcomingExpedition = lazy(() => import('./pages/UpcomingExpedition'))
 const CATALOG_SCROLL_KEY = 'catalogScrollY'
 const CATALOG_RESTORE_KEY = 'catalogRestorePending'
 
@@ -144,14 +143,12 @@ function AnimatedRoutes({
               )}
             />
             <Route path="/expedicoes" element={<Expeditions />} />
-            <Route
-              path={EXPEDITION_PATH}
-              element={<ExpedicaoLanding registrationTarget={REGISTRATION_TARGET} imageRoot="/images/Formulario" standalone={false} />}
-            />
-            <Route path={REGISTRATION_PATH} element={<ExpedicaoForm />} />
-            <Route path="/inscricao" element={<Navigate to={REGISTRATION_TARGET} replace />} />
-            <Route path="/expedicoes/campos-do-jordao-2026" element={<Navigate to={EXPEDITION_PATH} replace />} />
-            <Route path="/expedicoes/campos-do-jordao-2026/inscricao" element={<Navigate to={REGISTRATION_TARGET} replace />} />
+            <Route path={EXPEDITION_PATH} element={<UpcomingExpedition />} />
+            <Route path={MONTE_VERDE_PATH} element={<Navigate to={MONTE_VERDE_ARCHIVE} replace />} />
+            <Route path={REGISTRATION_PATH} element={<Navigate to={MONTE_VERDE_ARCHIVE} replace />} />
+            <Route path="/inscricao" element={<Navigate to={EXPEDITION_PATH} replace />} />
+            <Route path="/expedicoes/campos-do-jordao-2026" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
+            <Route path="/expedicoes/campos-do-jordao-2026/inscricao" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
             <Route path="/catalogo/*" element={<Catalog />} />
             <Route path="/contato" element={<Contact />} />
             <Route path="*" element={<NotFound />} />
@@ -175,11 +172,6 @@ function AppShell() {
       return 'intro'
     }
   })
-  const isExpeditionFlow =
-    pathname === EXPEDITION_PATH ||
-    pathname === REGISTRATION_PATH ||
-    pathname === '/inscricao'
-
   const revealHomeContent = useCallback(() => {
     setIntroPhase((current) => current === 'intro' ? 'content' : current)
   }, [])
@@ -216,7 +208,7 @@ function AppShell() {
           onIntroComplete={completeHomeIntro}
         />
       </main>
-      {!isExpeditionFlow && <Footer />}
+      <Footer />
     </div>
   )
 }

@@ -1,27 +1,21 @@
 # React + TypeScript + Vite
 
-## Expedição ativa: Monte Verde 2026
+## Próxima expedição: Serra Negra
 
-A Home abre a apresentação em `/expedicoes/monte-verde-2026`. Os botões de inscrição e **Garantir vaga** levam a `/expedicoes/monte-verde-2026/inscricao#formulario`. Os endereços antigos de Campos do Jordão redirecionam para o novo fluxo; Campos permanece no histórico das expedições realizadas.
+A Home e a página de expedições levam a `/expedicoes/serra-negra`. A data e o roteiro aguardam confirmação. Os botões **Garantir vaga** abrem o WhatsApp da Usina com mensagem de interesse em Serra Negra. Monte Verde está entre as expedições realizadas com a arte oficial e sem galeria; os endereços antigos da edição levam ao seu registro no histórico.
 
-O formulário foi integrado a partir de `Formulario-Campos/formulario-usina`, incluindo os acompanhantes, documentos, opções de veículo/locação e protocolo. Os dados e anexos são enviados ao Basin de Monte Verde já configurado nesse projeto.
+## Formulário arquivado: Monte Verde 2026
 
-### Configuração necessária na Vercel
-
-A função `api/protocol.js` precisa acessar o **mesmo Redis do formulário de Monte Verde** para manter a numeração existente. No projeto Vercel do Site-Usina, conecte essa integração ou configure o mesmo par `KV_REST_API_URL` / `KV_REST_API_TOKEN` (alternativa: `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`). Mantenha os valores somente no servidor, sem prefixo `VITE_` e sem adicioná-los ao repositório.
-
-Sem essa configuração, o formulário apresenta uma falha de protocolo e permite tentar novamente, sem enviar uma inscrição incompleta ao Basin. As variáveis do outro projeto Vercel não são transferidas ao copiar o código.
-
-`npm run dev` disponibiliza o frontend, mas não a função Vercel. Para verificar a interface localmente, use esse comando. Para verificar o envio real, configure o servidor numa prévia Vercel. Evite envios reais de teste para não reservar números de protocolo nem cadastrar participantes fictícios.
+As rotas antigas levam ao histórico de Monte Verde. O código do formulário foi preservado como referência e a API de protocolo e seus testes foram movidos para `archive/monte-verde-2026/`, fora da pasta `api/` que a Vercel usa para publicar funções. A publicação atual não precisa de Redis nem de configuração do Basin.
 
 ### Verificação local
 
 ```bash
 npm run build
-node --test tests/protocol.test.js
+node --test archive/monte-verde-2026/tests/protocol.test.js
 ```
 
-A landing usa a arte, as datas (6 a 8 de novembro de 2026), o roteiro e os itens incluídos do folder. O pacote casal usa R$ 5.590,00, condição do Boat Show autorizada pelo responsável também para o site. O destaque da próxima expedição na página de expedições apresenta Monte Verde, com os mesmos dados e links para a landing e a inscrição. Não foram acrescentados horários ou atrações que não constam no material. Não há galeria de imagens de expedições anteriores na landing de Monte Verde.
+Os testes da API arquivada simulam o Redis; não fazem inscrições reais.
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 

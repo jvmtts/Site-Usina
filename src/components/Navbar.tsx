@@ -2,12 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUpRight, Menu, X } from 'lucide-react'
-import {
-  REGISTRATION_PATH,
-  REGISTRATION_SECTION_ID,
-  REGISTRATION_TARGET,
-} from '../config/routes'
-import { scrollToSection } from '../utils/scrollToSection'
+import { upcomingExpedition } from '../config/upcomingExpedition'
 
 const links = [
   { label: 'Início', path: '/' },
@@ -26,15 +21,12 @@ function NavCta({ transparent = false, compact = false, mobile = false }: NavCta
   const [active, setActive] = useState(false)
 
   return (
-    <Link
-      to={REGISTRATION_TARGET}
+    <a
+      href={upcomingExpedition.whatsapp}
+      target="_blank"
+      rel="noopener noreferrer"
       className={mobile ? undefined : 'hidden md:inline-flex'}
-      onClick={() => {
-        window.requestAnimationFrame(() => {
-          scrollToSection(REGISTRATION_SECTION_ID)
-        })
-      }}
-      aria-label="Garantir vaga na expedição"
+      aria-label="Garantir vaga na Expedição Serra Negra pelo WhatsApp"
       onMouseEnter={() => setActive(true)}
       onMouseLeave={() => setActive(false)}
       onFocus={() => setActive(true)}
@@ -137,7 +129,7 @@ function NavCta({ transparent = false, compact = false, mobile = false }: NavCta
       >
         <ArrowUpRight size={mobile ? 18 : 16} strokeWidth={1.8} />
       </motion.span>
-    </Link>
+    </a>
   )
 }
 
@@ -151,9 +143,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
   const location = useLocation()
   const isHero =
     location.pathname === '/' ||
-    location.pathname === '/expedicoes' ||
-    location.pathname === REGISTRATION_PATH ||
-    location.pathname === '/inscricao'
+    location.pathname === '/expedicoes'
   const transparent = isHero && !scrolled
   const isLinkActive = (path: string) =>
     path === '/expedicoes'

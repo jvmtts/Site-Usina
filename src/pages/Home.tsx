@@ -1437,7 +1437,7 @@ export default function Home({
             <h2 id="cta-title" className="display">
               Há caminhos que só aparecem para quem decide ir.
             </h2>
-            <p>Conheça os detalhes da próxima expedição e descubra se essa experiência é para você.</p>
+            <p>Serra Negra é o próximo destino da Usina. A data e o roteiro serão confirmados em breve.</p>
             <Link to={EXPEDITION_PATH} className="btn-primary">
               Conhecer a expedição <ArrowUpRight aria-hidden="true" size={18} />
             </Link>

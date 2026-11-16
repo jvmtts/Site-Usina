@@ -1,0 +1,113 @@
+.upcoming-expedition {
+  padding-block: clamp(9rem, 11vw, 11rem) clamp(3rem, 7vw, 7rem);
+  background: #f4f2ec;
+  color: #11140f;
+}
+
+.upcoming-expedition-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+}
+
+.upcoming-expedition-copy {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.upcoming-expedition h1 {
+  margin: 1rem 0 1.4rem;
+  font-size: clamp(2rem, 12cqi, 4.8rem);
+  line-height: 1.02;
+  letter-spacing: -.05em;
+  text-wrap: balance;
+}
+
+.upcoming-expedition h1 span {
+  display: block;
+}
+
+.upcoming-expedition-copy > p {
+  max-width: 42ch;
+  color: #514f47;
+  line-height: 1.75;
+}
+
+.upcoming-expedition-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.7rem 0;
+  padding-block: 1rem;
+  border-block: 1px solid #dbd6ca;
+}
+
+.upcoming-expedition-status dt {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.upcoming-expedition-status dt svg {
+  color: #a64c0c;
+  flex: none;
+}
+
+.upcoming-expedition-status dd {
+  margin: .45rem 0 0;
+  color: #5b584f;
+  font-size: .87rem;
+}
+
+.upcoming-expedition .upcoming-expedition-note {
+  margin-top: .9rem;
+  font-size: .8rem;
+}
+
+.upcoming-expedition-back {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  margin-top: 1.35rem;
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.upcoming-expedition-cover {
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  border: 1px solid #ded9cd;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 18px 45px rgba(32, 35, 23, .07);
+}
+
+.upcoming-expedition-cover img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.upcoming-expedition-cover figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: .45rem 1rem;
+  padding: .9rem 1rem;
+  color: #57534a;
+  font-size: .7rem;
+}
+
+@media (max-width: 820px) {
+  .upcoming-expedition-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .upcoming-expedition h1 {
+    font-size: clamp(2rem, 9cqi, 3.9rem);
+  }
+}

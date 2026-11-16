@@ -24,7 +24,8 @@ import {
   X,
 } from 'lucide-react'
 import './Expeditions.css'
-import { EXPEDITION_PATH, REGISTRATION_TARGET } from '../config/routes'
+import { EXPEDITION_PATH } from '../config/routes'
+import { upcomingExpedition } from '../config/upcomingExpedition'
 
 interface Expedition {
   id: string
@@ -39,7 +40,7 @@ interface Expedition {
   coverImage: string
   coverImageAlt?: string
   showCoverTitle?: boolean
-  galleryImages: [string, ...string[]]
+  galleryImages?: [string, ...string[]]
 }
 
 interface HeroSlide {
@@ -145,6 +146,18 @@ const EXPEDITIONS: Expedition[] = [
                     'images/Campos/image5.png',
                     'images/Campos/image6.png',
     ],
+  },
+  {
+    id: 'monte-verde-2026',
+    sequenceLabel: 'Quinta expedição',
+    destination: 'Monte Verde',
+    shortDestination: 'Monte Verde',
+    state: 'Minas Gerais',
+    dateLabel: '6 a 8 de novembro de 2026',
+    duration: '3 dias',
+    description: 'A Usina se reuniu em Monte Verde para três dias de trilhas e encontros na serra.',
+    coverImage: '/images/monte-verde-realizada.png',
+    coverImageAlt: 'Arte oficial da Expedição Monte Verde, de 6 a 8 de novembro de 2026',
   },
 ]
 
@@ -409,8 +422,25 @@ function ExpeditionChapter({
   const actionOpacity = useTransform(smoothProgress, [0.52, 0.78], [0, 1])
   const actionY = useTransform(smoothProgress, [0.52, 0.78], [8, 0])
 
+  if (!expedition.galleryImages) {
+    return (
+      <article id={expedition.id} className="exp-chapter exp-chapter-archive" aria-label={`Expedição ${expedition.destination}`}>
+        <figure>
+          <img src={expedition.coverImage} alt={expedition.coverImageAlt ?? expedition.destination} width={1920} height={1080} loading="lazy" decoding="async" />
+          <figcaption>
+            <div>
+              <span className="mono exp-kicker">Expedição realizada</span>
+              <h3 className="display">{expedition.destination}</h3>
+            </div>
+            <p>{expedition.dateLabel} · {expedition.state}</p>
+          </figcaption>
+        </figure>
+      </article>
+    )
+  }
+
   return (
-    <article className={`exp-chapter${expedition.showCoverTitle ? ' exp-chapter-with-caption' : ''}`} aria-label={`Expedição ${expedition.destination}`}>
+    <article id={expedition.id} className={`exp-chapter${expedition.showCoverTitle ? ' exp-chapter-with-caption' : ''}`} aria-label={`Expedição ${expedition.destination}`}>
       <div ref={mediaRef} className="exp-chapter-media">
         <button
           type="button"
@@ -472,7 +502,7 @@ function ExpeditionStories({ onOpen }: { onOpen: (expedition: Expedition) => voi
             />
             <p>
               Do mar à serra, diferentes paisagens e o mesmo cuidado em cada quilômetro.
-              Abra uma rota para conhecer os detalhes e ver as imagens.
+              Relembre os destinos e os registros de cada edição.
             </p>
           </div>
         </Reveal>
@@ -498,36 +528,27 @@ function UpcomingExpedition() {
         <Reveal className="exp-next-card">
           <div className="exp-next-copy">
             <span className="mono exp-kicker">Próxima expedição</span>
-            <h2 id="next-expedition-heading" className="display">Monte Verde</h2>
+            <h2 id="next-expedition-heading" className="display">{upcomingExpedition.name}</h2>
             <p>
-              Um fim de semana nas trilhas de Monte Verde e região, com hospedagem,
-              refeições e a boa companhia de quem vai com você.
+              A próxima expedição off-road da Usina vai para Serra Negra. A data e o roteiro ainda serão confirmados.
             </p>
             <ul className="exp-next-tags" aria-label="Sobre a expedição">
               <li>Off-road</li>
-              <li>Minas Gerais</li>
-              <li>UTV · Quadriciclo · 4x4</li>
+              <li>São Paulo</li>
             </ul>
             <div className="exp-next-actions">
               <Link className="exp-button exp-next-primary" to={EXPEDITION_PATH}>
                 Conhecer a expedição <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <Link className="exp-button exp-button-light" to={REGISTRATION_TARGET}>
-                Fazer inscrição <ArrowRight size={18} aria-hidden="true" />
-              </Link>
+              <a className="exp-button exp-button-light" href={upcomingExpedition.whatsapp} target="_blank" rel="noopener noreferrer">
+                Garantir vaga <ArrowRight size={18} aria-hidden="true" />
+              </a>
             </div>
           </div>
-          <div className="exp-next-details">
-            <div className="exp-next-date" aria-label="De 6 a 8 de novembro de 2026">
-              <span className="mono">Reserve a data</span>
-              <strong className="display">06–08</strong>
-              <span className="mono">Novembro / 2026</span>
-            </div>
-            <div className="exp-next-price">
-              <span>Pacote casal</span>
-              <strong>R$ 5.590,00</strong>
-            </div>
-          </div>
+          <figure className="exp-next-cover">
+            <img src={upcomingExpedition.cover} alt="Arte ilustrativa com UTV e quadriciclos em uma trilha de terra" width={1672} height={941} loading="lazy" decoding="async" />
+            <figcaption className="mono">Serra Negra · Arte ilustrativa</figcaption>
+          </figure>
         </Reveal>
       </div>
     </section>
@@ -542,7 +563,7 @@ function ExpeditionDialog({ expedition, onClose }: { expedition: Expedition; onC
   const previouslyFocusedRef = useRef<HTMLElement | null>(null)
   const scrollLockReleasedRef = useRef(false)
   const reduceMotion = useReducedMotion()
-  const images = expedition.galleryImages
+  const images = expedition.galleryImages ?? [expedition.coverImage]
   const hasGallery = images.length > 1
 
   const navigate = useCallback((direction: number) => {
