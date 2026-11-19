@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import {
   BrowserRouter as Router,
   Link,
@@ -6,25 +6,40 @@ import {
   Route,
   Routes,
   useLocation,
+  type Location,
 } from 'react-router-dom'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import { CatalogProvider } from './catalog/CatalogProvider'
+import RouteSweep, { ROUTE_SWEEP_LOGO } from './components/RouteSweep'
 import Home from './pages/Home'
 import { EXPEDITION_PATH, MONTE_VERDE_ARCHIVE, MONTE_VERDE_PATH, REGISTRATION_PATH } from './config/routes'
 import { scrollToSection } from './utils/scrollToSection'
 
-const Expeditions = lazy(() => import('./pages/Expeditions'))
-const Catalog = lazy(() => import('./pages/Catalog'))
-const Contact = lazy(() => import('./pages/Contact'))
-const UpcomingExpedition = lazy(() => import('./pages/UpcomingExpedition'))
+const pageImports = {
+  '/expedicoes': () => import('./pages/Expeditions'),
+  '/catalogo': () => import('./pages/Catalog'),
+  '/contato': () => import('./pages/Contact'),
+  [EXPEDITION_PATH]: () => import('./pages/UpcomingExpedition'),
+}
+
+const Expeditions = lazy(pageImports['/expedicoes'])
+const Catalog = lazy(pageImports['/catalogo'])
+const Contact = lazy(pageImports['/contato'])
+const UpcomingExpedition = lazy(pageImports[EXPEDITION_PATH])
+const MAIN_ROUTES = new Set(['/', '/expedicoes', '/catalogo', '/contato', EXPEDITION_PATH])
+
+type RoutePhase = 'idle' | 'covering' | 'revealing'
+
+function routeSection(pathname: string) {
+  return pathname.split('/')[1]
+}
 const CATALOG_SCROLL_KEY = 'catalogScrollY'
 const CATALOG_RESTORE_KEY = 'catalogRestorePending'
 
-function ScrollToTop() {
-  const { pathname, hash } = useLocation()
-
-  useEffect(() => {
+function ScrollToTop({ pathname, hash }: Location) {
+  useLayoutEffect(() => {
     const shouldRestoreCatalog =
       pathname === '/catalogo' &&
       sessionStorage.getItem(CATALOG_RESTORE_KEY) === 'true'
@@ -73,7 +88,7 @@ function ScrollToTop() {
       }
     }
 
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [hash, pathname])
 
   return null
@@ -104,6 +119,8 @@ function NotFound() {
 }
 
 interface AnimatedRoutesProps {
+  location: Location
+  insideSweep: boolean
   introActive: boolean
   heroContentVisible: boolean
   onIntroContentReveal: () => void
@@ -111,56 +128,58 @@ interface AnimatedRoutesProps {
 }
 
 function AnimatedRoutes({
+  location,
+  insideSweep,
   introActive,
   heroContentVisible,
   onIntroContentReveal,
   onIntroComplete,
 }: AnimatedRoutesProps) {
-  const location = useLocation()
   const reduceMotion = useReducedMotion()
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location.pathname}
-        className="route-frame"
-        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
-        transition={{ duration: reduceMotion ? 0 : 0.28, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <Suspense fallback={<RouteLoading />}>
-          <Routes location={location}>
-            <Route
-              path="/"
-              element={(
-                <Home
-                  introActive={introActive}
-                  heroContentVisible={heroContentVisible}
-                  onIntroContentReveal={onIntroContentReveal}
-                  onIntroComplete={onIntroComplete}
-                />
-              )}
-            />
-            <Route path="/expedicoes" element={<Expeditions />} />
-            <Route path={EXPEDITION_PATH} element={<UpcomingExpedition />} />
-            <Route path={MONTE_VERDE_PATH} element={<Navigate to={MONTE_VERDE_ARCHIVE} replace />} />
-            <Route path={REGISTRATION_PATH} element={<Navigate to={MONTE_VERDE_ARCHIVE} replace />} />
-            <Route path="/inscricao" element={<Navigate to={EXPEDITION_PATH} replace />} />
-            <Route path="/expedicoes/campos-do-jordao-2026" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
-            <Route path="/expedicoes/campos-do-jordao-2026/inscricao" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
-            <Route path="/catalogo/*" element={<Catalog />} />
-            <Route path="/contato" element={<Contact />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={location.pathname}
+      className="route-frame"
+      initial={reduceMotion || insideSweep ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduceMotion ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Suspense fallback={<RouteLoading />}>
+        <Routes location={location}>
+          <Route
+            path="/"
+            element={(
+              <Home
+                introActive={introActive}
+                heroContentVisible={heroContentVisible}
+                onIntroContentReveal={onIntroContentReveal}
+                onIntroComplete={onIntroComplete}
+              />
+            )}
+          />
+          <Route path="/expedicoes" element={<Expeditions />} />
+          <Route path={EXPEDITION_PATH} element={<UpcomingExpedition />} />
+          <Route path={MONTE_VERDE_PATH} element={<Navigate to={MONTE_VERDE_ARCHIVE} replace />} />
+          <Route path={REGISTRATION_PATH} element={<Navigate to={MONTE_VERDE_ARCHIVE} replace />} />
+          <Route path="/inscricao" element={<Navigate to={EXPEDITION_PATH} replace />} />
+          <Route path="/expedicoes/campos-do-jordao-2026" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
+          <Route path="/expedicoes/campos-do-jordao-2026/inscricao" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
+          <Route path="/catalogo/*" element={<Catalog />} />
+          <Route path="/contato" element={<Contact />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+    </motion.div>
   )
 }
 
 function AppShell() {
-  const { pathname, search } = useLocation()
+  const location = useLocation()
+  const { pathname, search } = location
+  const reduceMotion = useReducedMotion()
+  const [displayedLocation, setDisplayedLocation] = useState(location)
+  const [routePhase, setRoutePhase] = useState<RoutePhase>('idle')
   const [introPhase, setIntroPhase] = useState<'intro' | 'content' | 'complete'>(() => {
     if (pathname !== '/') return 'complete'
 
@@ -195,13 +214,63 @@ function AppShell() {
   const homeIntroActive = pathname === '/' && introPhase !== 'complete'
   const homeContentVisible = pathname !== '/' || introPhase !== 'intro'
 
+  useLayoutEffect(() => {
+    if (reduceMotion) {
+      setDisplayedLocation(location)
+      setRoutePhase('idle')
+      return
+    }
+
+    if (routePhase !== 'idle' || location === displayedLocation) return
+
+    if (
+      introPhase === 'complete' &&
+      MAIN_ROUTES.has(location.pathname) &&
+      routeSection(location.pathname) !== routeSection(displayedLocation.pathname)
+    ) {
+      setRoutePhase('covering')
+      return
+    }
+
+    setDisplayedLocation(location)
+  }, [displayedLocation, introPhase, location, reduceMotion, routePhase])
+
+  useEffect(() => {
+    if (reduceMotion) return
+    const logo = new Image()
+    logo.fetchPriority = 'low'
+    logo.src = ROUTE_SWEEP_LOGO
+  }, [reduceMotion])
+
+  useEffect(() => {
+    if (routePhase !== 'covering') return
+    const preload = pageImports[pathname as keyof typeof pageImports]
+    if (preload) void preload().catch(() => undefined)
+  }, [pathname, routePhase])
+
+  const commitDestination = () => {
+    setDisplayedLocation(location)
+    setRoutePhase('revealing')
+  }
+
+  const transitioning = routePhase !== 'idle' && !reduceMotion
+
   return (
     <div className="site-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
-      <ScrollToTop />
+      <ScrollToTop {...displayedLocation} />
       <Navbar revealed={homeContentVisible} />
+      {transitioning && (
+        <RouteSweep
+          phase={routePhase === 'covering' ? 'covering' : 'revealing'}
+          onCovered={commitDestination}
+          onRevealed={() => setRoutePhase('idle')}
+        />
+      )}
       <main id="main-content" className="app-main" tabIndex={-1}>
         <AnimatedRoutes
+          location={displayedLocation}
+          insideSweep={transitioning}
           introActive={homeIntroActive}
           heroContentVisible={homeContentVisible}
           onIntroContentReveal={revealHomeContent}
@@ -216,7 +285,9 @@ function AppShell() {
 export default function App() {
   return (
     <Router>
-      <AppShell />
+      <CatalogProvider>
+        <AppShell />
+      </CatalogProvider>
     </Router>
   )
 }

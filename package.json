@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:catalog": "node --test tests/conta-azul-catalog.test.mjs tests/conta-azul-admin.test.mjs",
+    "estoque:previa": "node scripts/estoque-previa.mjs"
   },
   "dependencies": {
     "framer-motion": "^12.41.0",

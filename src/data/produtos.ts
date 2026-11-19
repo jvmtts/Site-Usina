@@ -1,5 +1,7 @@
 export interface Produto {
-  id: number;
+  id: number | string;
+  sku?: string;
+  opcoesEstoque?: { id: string; label: string; price: number }[];
   nome: string;
   categoria: string | string[];
   preco: string | number;

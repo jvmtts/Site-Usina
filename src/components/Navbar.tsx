@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, Menu, X } from 'lucide-react'
 import { upcomingExpedition } from '../config/upcomingExpedition'
 
@@ -141,14 +141,14 @@ export default function Navbar({ revealed = true }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const location = useLocation()
+  const reduceMotion = useReducedMotion()
   const isHero =
     location.pathname === '/' ||
     location.pathname === '/expedicoes'
   const transparent = isHero && !scrolled
   const isLinkActive = (path: string) =>
-    path === '/expedicoes'
-      ? location.pathname.startsWith('/expedicoes')
-      : location.pathname === path
+    location.pathname === path ||
+    (path !== '/' && location.pathname.startsWith(path + '/'))
 
   useEffect(() => {
     const updateNavbar = () => setScrolled(window.scrollY > 60)
@@ -247,6 +247,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
                 <li key={link.path} style={{ position: 'relative' }}>
                   <Link
                     to={link.path}
+                    aria-current={active ? "page" : undefined}
                     className="mono"
                     style={{
                       fontSize: '0.65rem',
@@ -278,7 +279,9 @@ export default function Navbar({ revealed = true }: NavbarProps) {
 
                   {active && (
                     <motion.span
-                      layoutId="nav-line"
+                      layoutId={reduceMotion ? undefined : "nav-line"}
+                      aria-hidden="true"
+                      transition={{ duration: reduceMotion ? 0 : 0.32, ease: [0.16, 1, 0.3, 1] }}
                       style={{
                         position: 'absolute',
                         bottom: '-4px',
@@ -346,6 +349,8 @@ export default function Navbar({ revealed = true }: NavbarProps) {
               >
                 <Link
                   to={link.path}
+                  aria-current={isLinkActive(link.path) ? "page" : undefined}
+                  onClick={() => setOpen(false)}
                   className="display"
                   style={{
                     fontSize: 'clamp(2.5rem, 9vw, 5rem)',
