@@ -101,14 +101,19 @@ KV_REST_API_URL e KV_REST_API_TOKEN injetados pela integração Redis.
 
 ### Atualização automática
 
-Agende uma chamada HTTPS para `/api/catalogo-sync` a cada 15 minutos, com o
-cabeçalho `Authorization: Bearer` seguido do valor de `CRON_SECRET`. Gere uma
-terceira chave para essa variável. No Vercel Cron, a plataforma inclui esse
-cabeçalho automaticamente quando `CRON_SECRET` está configurado. Para ativar
-esse agendamento no Vercel Cron num plano que aceite a frequência, adicione
-`"crons": [{ "path": "/api/catalogo-sync", "schedule": "*/15 * * * *" }]`
-à raiz de `vercel.json`. Com outro agendador, configure o mesmo endereço e
-cabeçalho nele. Valide a primeira execução pelo horário da coleta no painel.
+O Vercel Schedules chama a função privada `api/catalogo-agendado` a cada 15 minutos
+em produção. O plano Hobby pode distribuir as execuções dentro de janelas de
+15 minutos. Confirme pelo horário da última coleta no painel.
+
+Se precisar usar um agendador externo, configure `CRON_SECRET` e envie
+`Authorization: Bearer` com essa chave nas chamadas a `/api/catalogo-sync`.
+
+Para testar a conexão antes de promover um deploy de produção, use um deploy
+em espera com Vercel Authentication e `CATALOG_STAGED_ADMIN=1`. Nesse deploy,
+o painel também aceita a URL gerada pela Vercel e mostra o retorno OAuth
+correspondente. Depois de promover, cadastre no Conta Azul a URL oficial de
+retorno para as próximas autorizações e remova a variável de configuração
+temporária dos futuros deploys.
 
 ### Testes locais
 

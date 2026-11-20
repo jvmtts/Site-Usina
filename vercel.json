@@ -2,7 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/catalogo-admin.mjs": { "maxDuration": 300 },
-    "api/catalogo-sync.mjs": { "maxDuration": 300 }
+    "api/catalogo-sync.mjs": { "maxDuration": 300 },
+    "api/catalogo-agendado.mjs": {
+      "maxDuration": 300,
+      "experimentalTriggers": [{ "type": "schedule/v1beta" }]
+    }
+  },
+  "schedules": {
+    "estoque-conta-azul": {
+      "schedule": "*/15 * * * *",
+      "function": "api/catalogo-agendado"
+    }
   },
   "rewrites": [
     {

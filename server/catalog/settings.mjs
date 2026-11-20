@@ -16,9 +16,12 @@ export function storage(env = process.env) {
   })
 }
 
-export function catalogSettings(env = process.env) {
+export function catalogSettings(env = process.env, requestOrigin) {
   const branchOrigin = env.VERCEL_ENV === 'preview' && env.VERCEL_BRANCH_URL ? 'https://' + env.VERCEL_BRANCH_URL : ''
-  const configuredOrigin = env.CATALOG_ORIGIN || branchOrigin
+  const deploymentOrigin = env.VERCEL_URL ? 'https://' + env.VERCEL_URL : ''
+  const stagedAdmin = env.VERCEL_ENV === 'production' && env.CATALOG_STAGED_ADMIN === '1' &&
+    deploymentOrigin && requestOrigin === deploymentOrigin
+  const configuredOrigin = stagedAdmin ? deploymentOrigin : env.CATALOG_ORIGIN || branchOrigin
   const origin = new URL(configuredOrigin)
   if (origin.origin !== configuredOrigin || origin.protocol !== 'https:' ||
       !strongKey.test(env.CATALOG_ADMIN_KEY ?? '') || !strongKey.test(env.CATALOG_ENCRYPTION_KEY ?? '')) {

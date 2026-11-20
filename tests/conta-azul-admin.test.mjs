@@ -285,3 +285,19 @@ test('a Vercel preview uses its stable branch URL and isolated Redis keys', asyn
   assert.equal(canonical.headers.get('location'), config.redirectUri)
   assert.equal((await handler(new Request(alternate, { method: 'POST' }))).status, 403)
 })
+
+test('allows staged OAuth only on the production deployment URL explicitly enabled for setup', () => {
+  const env = {
+    VERCEL_ENV: 'production',
+    VERCEL_URL: 'site-usina-staged.vercel.app',
+    CATALOG_ORIGIN: config.origin,
+    CATALOG_ADMIN_KEY: config.adminKey,
+    CATALOG_ENCRYPTION_KEY: config.encryptionKey,
+    CATALOG_STAGED_ADMIN: '1',
+  }
+  const staged = 'https://site-usina-staged.vercel.app'
+  assert.equal(catalogSettings(env, staged).redirectUri, staged + '/api/catalogo-admin')
+  assert.equal(catalogSettings(env, 'https://another-site.vercel.app').origin, config.origin)
+  assert.equal(catalogSettings({ ...env, CATALOG_STAGED_ADMIN: '0' }, staged).origin, config.origin)
+  assert.equal(catalogSettings({ ...env, VERCEL_ENV: 'preview' }, staged).origin, config.origin)
+})
