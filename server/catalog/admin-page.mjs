@@ -21,7 +21,7 @@ export const secureHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'X-Robots-Tag': 'noindex, nofollow',
   'Referrer-Policy': 'no-referrer',
-  'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+  'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://login.contaazul.com; base-uri 'none'; frame-ancestors 'none'",
 }
 
 const layout = `<!doctype html><html lang="pt-BR"><meta charset="utf-8">
@@ -92,6 +92,7 @@ export function adminPage({ status, redirectUri, notice, unavailable } = {}) {
         button('login', 'Entrar') + '</form></section>'
   return new Response(layout + (Object.hasOwn(notes, notice) ? '<p class="notice" role="status">' + notes[notice] + '</p>' : '') +
     body + '</main></body></html>', {
-    status: unavailable ? 503 : 200, headers: { ...secureHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+    status: unavailable ? 503 : 200,
+    headers: { ...secureHeaders, 'Referrer-Policy': 'same-origin', 'Content-Type': 'text/html; charset=utf-8' },
   })
 }

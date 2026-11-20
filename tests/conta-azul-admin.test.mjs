@@ -105,6 +105,8 @@ test('admin completes OAuth without displaying secrets and rejects forged or rep
   const page = await handler(request({ cookie }))
   assert.match(await page.text(), /Autorizar Conta Azul/)
   assert.equal(page.headers.get('cache-control'), 'no-store')
+  assert.equal(page.headers.get('referrer-policy'), 'same-origin')
+  assert.ok(page.headers.get('content-security-policy').includes('https://login.contaazul.com'))
 
   const auth = new URL((await post({ action: 'authorize' })).headers.get('location'))
   const state = new URLSearchParams(auth.hash.split('?')[1]).get('state')
@@ -115,6 +117,7 @@ test('admin completes OAuth without displaying secrets and rejects forged or rep
   assert.match(noSession.headers.get('location'), /invalid/)
   const callback = await handler(request({ query, cookie }))
   assert.equal(callback.headers.get('location'), '/api/catalogo-admin?status=connected')
+  assert.equal(callback.headers.get('referrer-policy'), 'no-referrer')
   const replay = await handler(request({ query, cookie }))
   assert.match(replay.headers.get('location'), /invalid/)
   assert.equal(exchangeCount(), 1)
