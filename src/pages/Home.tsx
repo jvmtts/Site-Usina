@@ -590,7 +590,7 @@ function ReportingContent() {
 }
 
 function ServicesSection() {
-  const { products, pending } = useCatalog()
+  const { products, status } = useCatalog()
   const featuredProducts = products.filter(product => product.disponivel).slice(0, 16)
   const portalRef = useRef<HTMLDivElement | null>(null)
   const portalHasEntered = useInView(portalRef, {
@@ -910,7 +910,7 @@ function ServicesSection() {
                           ))}
                         </div>
                       ) : (
-                        <p className="services-products-empty">{pending ? 'Carregando produtos…' : 'Nenhum produto disponível no momento.'}</p>
+                        <p className="services-products-empty">{status === 'loading' ? 'Carregando produtos…' : status === 'unavailable' ? 'Estoque em atualização.' : 'Nenhum produto disponível no momento.'}</p>
                       )}
 
                       <Link to="/catalogo" className="services-products-more">

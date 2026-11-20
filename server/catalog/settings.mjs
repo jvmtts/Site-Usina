@@ -5,16 +5,22 @@ const strongKey = /^[A-Za-z0-9_-]{43,128}$/
 export const snapshotLifetime = 45 * 60_000
 
 export function storage(env = process.env) {
+  const upstashConfigured = env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
+  const defaultNamespace = env.VERCEL_ENV === 'preview'
+    ? 'preview-' + createHash('sha256').update(env.VERCEL_BRANCH_URL || 'site-usina').digest('hex').slice(0, 16)
+    : 'site-usina'
   return redisCatalog({
-    url: env.UPSTASH_REDIS_REST_URL,
-    token: env.UPSTASH_REDIS_REST_TOKEN,
-    namespace: env.CATALOG_NAMESPACE || 'site-usina',
+    url: upstashConfigured ? env.UPSTASH_REDIS_REST_URL : env.KV_REST_API_URL,
+    token: upstashConfigured ? env.UPSTASH_REDIS_REST_TOKEN : env.KV_REST_API_TOKEN,
+    namespace: env.CATALOG_NAMESPACE || defaultNamespace,
   })
 }
 
 export function catalogSettings(env = process.env) {
-  const origin = new URL(env.CATALOG_ORIGIN)
-  if (origin.origin !== env.CATALOG_ORIGIN || origin.protocol !== 'https:' ||
+  const branchOrigin = env.VERCEL_ENV === 'preview' && env.VERCEL_BRANCH_URL ? 'https://' + env.VERCEL_BRANCH_URL : ''
+  const configuredOrigin = env.CATALOG_ORIGIN || branchOrigin
+  const origin = new URL(configuredOrigin)
+  if (origin.origin !== configuredOrigin || origin.protocol !== 'https:' ||
       !strongKey.test(env.CATALOG_ADMIN_KEY ?? '') || !strongKey.test(env.CATALOG_ENCRYPTION_KEY ?? '')) {
     throw new Error('Controle do catálogo indisponível.')
   }

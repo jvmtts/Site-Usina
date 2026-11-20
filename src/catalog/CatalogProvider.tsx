@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { produtos, type Produto } from '../data/produtos'
-import { CatalogContext } from './catalogContext'
+import { CatalogContext, type CatalogState } from './catalogContext'
 
 type Inventory = { products: Produto[]; updatedAt: string }
 
@@ -24,8 +24,7 @@ function validInventory(value: unknown): value is Inventory {
 }
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Produto[]>([])
-  const [pending, setPending] = useState(true)
+  const [catalog, setCatalog] = useState<CatalogState>({ products: [], status: 'loading' })
 
   useEffect(() => {
     const lifetime = new AbortController()
@@ -48,19 +47,18 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         const next: unknown = isJson ? await response.json() : null
         if (lifetime.signal.aborted) return
         if (response.ok && validInventory(next)) {
-          setProducts(next.products)
+          setCatalog({ products: next.products, status: 'ready' })
         } else {
           const devWithoutInventory = import.meta.env.DEV && response.status === 404 &&
             next && typeof next === 'object' && 'status' in next && next.status === 'previsualizacao_desativada'
-          setProducts(devWithoutInventory ? produtos : [])
+          setCatalog(devWithoutInventory ? { products: produtos, status: 'ready' } : { products: [], status: 'unavailable' })
         }
       } catch {
-        if (!lifetime.signal.aborted) setProducts([])
+        if (!lifetime.signal.aborted) setCatalog({ products: [], status: 'unavailable' })
       } finally {
         window.clearTimeout(timeout)
         lifetime.signal.removeEventListener('abort', cancel)
         inProgress = false
-        if (!lifetime.signal.aborted) setPending(false)
       }
     }
 
@@ -75,7 +73,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <CatalogContext.Provider value={{ products, pending }}>
+    <CatalogContext.Provider value={catalog}>
       {children}
     </CatalogContext.Provider>
   )

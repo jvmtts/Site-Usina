@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react'
 import { produtos, type Produto } from '../data/produtos'
 
-type CatalogState = { products: Produto[]; pending: boolean }
+export type CatalogState = { products: Produto[]; status: 'loading' | 'ready' | 'unavailable' }
 
-export const CatalogContext = createContext<CatalogState>({ products: produtos, pending: false })
+export const CatalogContext = createContext<CatalogState>({ products: produtos, status: 'ready' })
 
 export function useCatalog() {
   return useContext(CatalogContext)

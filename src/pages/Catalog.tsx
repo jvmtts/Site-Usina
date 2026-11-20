@@ -127,7 +127,7 @@ function CardProduto({ produto, priority }: { produto: Produto; priority: boolea
 }
 
 function Vitrine() {
-  const { products } = useCatalog()
+  const { products, status } = useCatalog()
   const [busca, setBusca] = useState(() => sessionStorage.getItem('catalogBusca') || '')
   const [categoria, setCategoria] = useState(() => sessionStorage.getItem('catalogCategoria') || 'Todos')
   const [limite, setLimite] = useState(getInitialCatalogLimit)
@@ -331,7 +331,7 @@ function Vitrine() {
 
         <div className="catalog-results-header">
           <h2 id="catalog-results-title">{activeCategory === 'Todos' ? 'Todos os produtos' : activeCategory}</h2>
-          <span role="status">{filtrados.length} {filtrados.length === 1 ? 'produto' : 'produtos'}</span>
+          {status === 'ready' && <span role="status">{filtrados.length} {filtrados.length === 1 ? 'produto' : 'produtos'}</span>}
         </div>
 
         {mostrar.length ? (
@@ -348,6 +348,12 @@ function Vitrine() {
                 </motion.article>
               ))}
             </AnimatePresence>
+          </div>
+        ) : status !== 'ready' || products.length === 0 ? (
+          <div className="catalog-empty" role="status">
+            <h3>{status === 'loading' ? 'Consultando estoque…' :
+              status === 'unavailable' ? 'Estoque em atualização' : 'Nenhum produto disponível no momento'}</h3>
+            {status === 'unavailable' && <p>Volte em alguns instantes para conferir os produtos disponíveis.</p>}
           </div>
         ) : (
           <div className="catalog-empty">
@@ -384,7 +390,7 @@ function DetalheProduto() {
 
   useEffect(() => { window.scrollTo(0, 0) }, [id])
 
-  const { products, pending } = useCatalog()
+  const { products, status } = useCatalog()
   const produto = products.find(product => String(product.id) === id)
   const navigationSlot = useRef<HTMLDivElement>(null)
   const [backPinned, setBackPinned] = useState(false)
@@ -460,8 +466,12 @@ function DetalheProduto() {
 
   useEffect(() => { setImgAtiva(0) }, [corAtual])
 
-  if (!produto && pending) {
+  if (!produto && status === 'loading') {
     return <div className="catalog-detail-status" role="status">Carregando produto…</div>
+  }
+
+  if (status === 'unavailable') {
+    return <div className="catalog-detail-status" role="status">Estoque em atualização. Volte em alguns instantes.</div>
   }
 
   if (!produto || produto.disponivel === false) {

@@ -62,6 +62,11 @@ export function catalogAdmin(service, config) {
   return async request => {
     try {
       const url = new URL(request.url)
+      if (url.origin !== config.origin) {
+        return request.method === 'GET'
+          ? redirect(config.redirectUri)
+          : new Response(null, { status: 403, headers: secureHeaders })
+      }
       const session = loggedIn(request, config)
 
       if (request.method === 'GET') {

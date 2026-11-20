@@ -91,6 +91,14 @@ vínculos, `CATALOG_CONTAAZUL_BINDINGS` aceita um objeto JSON com os IDs do site
 como chaves e os IDs do Conta Azul como valores. As fotos e links de produtos
 vinculados são reaproveitados.
 
+### Prévia na Vercel
+
+As variáveis do painel podem ser configuradas só para a branch de prévia.
+Quando a Vercel fornece o endereço da branch, o painel o usa como origem da
+prévia e exibe a URL de retorno correspondente. O armazenamento usa um
+namespace próprio da branch e também aceita os nomes
+KV_REST_API_URL e KV_REST_API_TOKEN injetados pela integração Redis.
+
 ### Atualização automática
 
 Agende uma chamada HTTPS para `/api/catalogo-sync` a cada 15 minutos, com o

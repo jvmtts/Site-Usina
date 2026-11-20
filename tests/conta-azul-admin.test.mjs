@@ -4,7 +4,7 @@ import { catalogAdmin } from '../server/catalog/admin.mjs'
 import { connectedCompany } from '../server/catalog/conta-azul.mjs'
 import { redisCatalog } from '../server/catalog/redis.mjs'
 import { publicCatalog, catalogService } from '../server/catalog/service.mjs'
-import { reveal, snapshotLifetime } from '../server/catalog/settings.mjs'
+import { catalogSettings, reveal, snapshotLifetime, storage } from '../server/catalog/settings.mjs'
 
 const origin = 'https://vitrine.example'
 const config = {
@@ -247,4 +247,38 @@ test('Vercel handlers keep the public feed private and gate scheduled synchroniz
       else process.env[name] = original
     }
   }
+})
+
+test('a Vercel preview uses its stable branch URL and isolated Redis keys', async () => {
+  const env = {
+    VERCEL_ENV: 'preview',
+    VERCEL_BRANCH_URL: 'site-usina-git-preview.example',
+    CATALOG_ADMIN_KEY: config.adminKey,
+    CATALOG_ENCRYPTION_KEY: config.encryptionKey,
+    KV_REST_API_URL: 'https://cache.example',
+    KV_REST_API_TOKEN: 'test-storage-key',
+  }
+  const settings = catalogSettings(env)
+  assert.equal(settings.redirectUri, 'https://site-usina-git-preview.example/api/catalogo-admin')
+  const seenKeys = []
+  const fetchBefore = globalThis.fetch
+  globalThis.fetch = async (_url, request) => {
+    seenKeys.push(JSON.parse(request.body)[1])
+    return Response.json({ result: [null] })
+  }
+  try {
+    await storage(env).read('snapshot')
+    await storage({ ...env, VERCEL_BRANCH_URL: 'another-preview.example' }).read('snapshot')
+    await storage({ ...env, VERCEL_ENV: 'production' }).read('snapshot')
+  } finally {
+    globalThis.fetch = fetchBefore
+  }
+  assert.notEqual(seenKeys[0], seenKeys[1])
+  assert.match(seenKeys[0], /^usina:catalogo:preview-[a-f0-9]+:snapshot$/)
+  assert.equal(seenKeys[2], 'usina:catalogo:site-usina:snapshot')
+  const { handler } = fixture()
+  const alternate = 'https://deployment-id.example/api/catalogo-admin'
+  const canonical = await handler(new Request(alternate + '?code=do-not-forward'))
+  assert.equal(canonical.headers.get('location'), config.redirectUri)
+  assert.equal((await handler(new Request(alternate, { method: 'POST' }))).status, 403)
 })
