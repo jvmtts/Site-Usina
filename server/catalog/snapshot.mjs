@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto'
 import { identifier } from './conta-azul.mjs'
 
 const sellableType = new Set(['MERCADORIA_PARA_REVENDA', 'PRODUTO_ACABADO'])
-const acceptedKinds = new Set(['PRODUTO', 'KIT_PRODUTO', 'VARIACAO_PRODUTO'])
 const shortText = (value, size = 180) => typeof value === 'string' ? value.trim().slice(0, size) : ''
 const normalized = value => shortText(value, 240).normalize('NFD').replace(/\p{Diacritic}/gu, '')
   .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -42,9 +41,12 @@ function imagesFrom(product) {
 }
 
 function variantIdsFrom(item, detail) {
-  const list = [item.produtos_variacao, detail.variacao?.produtos].flatMap(rows => Array.isArray(rows) ? rows : [])
+  const summary = detail.formato !== 'SIMPLES' && Array.isArray(item.produtos_variacao)
+    ? item.produtos_variacao.filter(child => !child?.id_produto_pai_variacao || child.id_produto_pai_variacao === item.id)
+    : []
+  const detailed = Array.isArray(detail.variacao?.produtos) ? detail.variacao.produtos : []
   const unique = new Map()
-  for (const child of list) {
+  for (const child of [...summary, ...detailed]) {
     if (!identifier.test(child?.id ?? '') || child.id === item.id) continue
     unique.set(child.id, { ...unique.get(child.id), ...child })
   }
@@ -75,21 +77,23 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   for (const id of Object.keys(bindings)) if (!manualIDs.has(id)) delete bindings[id]
   const claimed = parseBindings(bindings, manual)
   const items = await client.list()
-  const variantIds = new Set(items.flatMap(item => Array.isArray(item.produtos_variacao)
-    ? item.produtos_variacao.map(child => child.id) : []))
-  const parents = items.filter(item => !variantIds.has(item.id) &&
-    (item.tipo !== 'VARIACAO_PRODUTO' || item.produtos_variacao?.length) &&
-    (acceptedKinds.has(item.tipo) || !item.tipo))
+
   const detailCache = new Map()
   const detailFor = id => {
     if (!detailCache.has(id)) detailCache.set(id, client.detail(id))
     return detailCache.get(id)
   }
-  const details = await loadInBatches(parents, 6, async item => ({ item, detail: await detailFor(item.id) }))
+  const reviewed = await loadInBatches(items, 6, async item => {
+    const detail = await detailFor(item.id)
+    return { item, detail, variants: variantIdsFrom(item, detail) }
+  })
+  const childIds = new Set(reviewed.flatMap(record => record.variants.map(child => child.id)))
+  const details = reviewed.filter(record => !childIds.has(record.item.id))
+  if (items.length && !details.length) throw new Error('Inventário sem produtos principais identificados na API.')
   const found = new Map(details.map(record => [record.item.id, record]))
   const suggestions = new Map()
   const withheld = new Set()
-  const report = { received: items.length, published: 0, linked: 0, review: [], withoutPhoto: [], unmatchedLocal: [] }
+  const report = { received: items.length, examined: details.length, published: 0, linked: 0, review: [], withoutPhoto: [], unmatchedLocal: [] }
   const note = (item, reason) => report.review.push({
     id: item.id, sku: shortText(item.codigo), name: shortText(item.nome), reason,
   })
@@ -137,7 +141,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   }
 
   const records = details.filter(({ item }) => claimed.has(item.id) || !withheld.has(item.id))
-  const imported = await loadInBatches(records, 4, async ({ item, detail }) => {
+  const imported = await loadInBatches(records, 4, async ({ item, detail, variants }) => {
     const linkedId = linkedSource.get(item.id)
     const local = linkedId ? manual.find(product => String(product.id) === linkedId) : undefined
     const id = local?.id ?? publicId(item.id)
@@ -148,7 +152,6 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
       return { hidden: id }
     }
     const name = shortText(local?.nome || detail.nome || item.nome)
-    const variants = variantIdsFrom(item, detail)
     const isGroup = variants.length > 0 || detail.formato === 'VARIACAO'
     const children = await loadInBatches(variants, 4, async child => ({
       child, detail: await detailFor(child.id),

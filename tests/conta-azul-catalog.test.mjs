@@ -123,3 +123,17 @@ test('OAuth follows the official endpoint and accepts rotated tokens', async () 
   assert.equal(token.refreshToken, 'rotated-token')
   assert.ok(token.expiresAt > Date.now())
 })
+
+test('checks available stock in details even when summaries have different types or reference themselves', async () => {
+  const anchor = item(41, 'Âncora portátil', { tipo: 'SIMPLES' })
+  const accessory = item(42, 'Cabo de amarração')
+  const another = item(43, 'Suporte para jet ski', { tipo: 'VARIACAO_PRODUTO' })
+  anchor.produtos_variacao = [{ id: anchor.id }, { id: accessory.id, id_produto_pai_variacao: another.id }]
+  another.produtos_variacao = [{ id: another.id }]
+  const rows = [anchor, accessory, another]
+  const details = new Map(rows.map(row => [row.id, detail(row, 4, 149, { formato: 'SIMPLES' })]))
+  const snapshot = await buildSnapshot({ client: clientFor(rows, details), manual: [] })
+  assert.equal(snapshot.report.examined, 3)
+  assert.equal(snapshot.report.published, 3)
+  assert.deepEqual(snapshot.catalog.map(product => product.nome), ['Âncora portátil', 'Cabo de amarração', 'Suporte para jet ski'])
+})
