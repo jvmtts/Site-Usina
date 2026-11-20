@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, Routes, Route, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, ImageOff, Search, X, ZoomIn } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, ImageOff, Search, X, ZoomIn } from 'lucide-react'
 import type { Produto } from '@/data/produtos'
 import { useCatalog } from '@/catalog/catalogContext'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
@@ -116,10 +116,7 @@ function CardProduto({ produto, priority }: { produto: Produto; priority: boolea
         <h3 id={'catalog-product-title-' + produto.id}>{produto.nome}</h3>
         <div className="catalog-product-footer">
           <p id={'catalog-product-price-' + produto.id} className="catalog-product-price">{price}</p>
-          <span className="catalog-card-cta" aria-hidden="true">
-            <span>Ver detalhes</span>
-            <span className="catalog-card-cta-arrow"><ArrowUpRight size={17} strokeWidth={1.8} /></span>
-          </span>
+          <span className="catalog-card-cta" aria-hidden="true">Ver detalhes</span>
         </div>
       </div>
     </Link>
