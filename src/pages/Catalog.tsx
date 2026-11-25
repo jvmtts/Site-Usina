@@ -8,11 +8,13 @@ import { formatCatalogPrice } from '@/catalog/formatCatalogPrice'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import './Catalog.css'
 
-const CATALOG_BATCH_SIZE = 9
+const CATALOG_BATCH_SIZE = 8
 const CATALOG_SCROLL_KEY = 'catalogScrollY'
 const CATALOG_RESTORE_KEY = 'catalogRestorePending'
 
 const getInitialCatalogLimit = () => {
+  if (sessionStorage.getItem(CATALOG_RESTORE_KEY) !== 'true') return CATALOG_BATCH_SIZE
+
   const storedLimit = Number.parseInt(sessionStorage.getItem('catalogLimite') || '', 10)
   if (!Number.isFinite(storedLimit)) return CATALOG_BATCH_SIZE
 
