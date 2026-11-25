@@ -106,17 +106,22 @@ test('lists in-stock products and variants for consultation without treating mis
 test('completes generic catalog fields for identified models and reports unidentified items for review', async () => {
   const goggles = item(30, 'OCULOS 100% STRATA 2 SOLAR ECLIPSE')
   const unknown = item(31, 'Track Preto')
+  const shirt = item(32, 'Camisa Lycra PRO LIFE 703L')
   const snapshot = await buildSnapshot({
-    client: clientFor([goggles, unknown], new Map([
+    client: clientFor([goggles, unknown, shirt], new Map([
       [goggles.id, detail(goggles, 1, 0, { categoria: { descricao: 'Outras' } })],
       [unknown.id, detail(unknown, 1, 0, { categoria: { descricao: 'Outras' } })],
+      [shirt.id, detail(shirt, 1, 30)],
     ])),
     manual: [],
   })
-  assert.equal(snapshot.catalog[0].categoria, 'Óculos')
-  assert.equal(snapshot.catalog[0].fichaTecnica.Modelo, 'Strata 2')
-  assert.match(snapshot.catalog[0].descricao, /motocross/i)
-  assert.equal(snapshot.catalog[1].descricao, undefined)
+  const byName = new Map(snapshot.catalog.map(product => [product.nome, product]))
+  assert.equal(byName.get(goggles.nome).categoria, 'Óculos')
+  assert.equal(byName.get(goggles.nome).fichaTecnica.Modelo, 'Strata 2')
+  assert.match(byName.get(goggles.nome).descricao, /motocross/i)
+  assert.equal(byName.get(shirt.nome).fichaTecnica?.Modelo, '703L')
+  assert.match(byName.get(shirt.nome).descricao, /manga longa/i)
+  assert.equal(byName.get(unknown.nome).descricao, undefined)
   assert.deepEqual(snapshot.report.withoutDescription.map(row => row.name), [unknown.nome])
 })
 

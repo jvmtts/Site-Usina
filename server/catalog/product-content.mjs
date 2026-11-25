@@ -34,6 +34,19 @@ const productFamilies = [
   [/\bsuporte\b.*\b(?:camera insta|insta ?360)\b/, 'Acessórios', 'Suporte para câmera de ação Insta360 para uso em jet ski. Confirme o encaixe com a câmera e a moto aquática antes da compra.'],
   [/\bsuporte\b.*\b(?:copo|porta copo)\b/, 'Acessórios', 'Suporte para copo de jet ski. Confira a indicação de casco e de lado de instalação quando constar na identificação da peça.'],
   [/\bcapa sea doo nylon\b/, 'Acessórios', 'Capa de nylon para proteger o jet ski quando estiver fora de uso. Os modelos e o ano cadastrados constam no nome da peça.', { Material: 'Nylon' }],
+  [/\bcamisa lycra pro ?life 703l\b/, 'Roupas', 'Camisa Prolife 703L de manga longa para atividades ao ar livre e esportes aquáticos. Consulte a tabela da marca para escolher o tamanho.', { Marca: 'Prolife', Modelo: '703L' }],
+  [/\badaptador para kit de adocamento\b/, 'Acessórios', 'Adaptador para conectar o kit de adoçamento do jet ski. Confira o encaixe da peça com o seu kit.'],
+  [/\bboia inflavel deck flutuante 244x244cm\b/, 'Acessórios', 'Deck inflável quadrado que forma uma plataforma flutuante para lazer. O modelo cadastrado tem 244 cm de lado.', { Formato: 'Quadrado', Dimensões: '244 × 244 cm' }],
+  [/\bchave sea doo para codificar\b/, 'Acessórios', 'Chave Sea-Doo para programação no jet ski. Consulte o código de peça e a compatibilidade com o seu modelo.', { Marca: 'Sea-Doo' }],
+  [/\bcold sak 15l duffle\b/, 'Acessórios', 'Bolsa térmica de 15 litros no formato duffle para levar bebidas e alimentos em passeios.', { Capacidade: '15 L' }],
+  [/\bdefensa para jet ski alfa\b/, 'Acessórios', 'Defensa para usar na atracação do jet ski. Ajuda a reduzir o contato direto entre o casco e o atracadouro.'],
+  [/\bfiltro de oleo\b.*\bsea doo 4t brp\b/, 'Acessórios', 'Filtro de óleo para manutenção de jet ski Sea-Doo de quatro tempos. Confirme o código da peça para o motor do seu modelo.', { Marca: 'BRP' }],
+  [/\bblusa supreme de neoprene\b/, 'Roupas', 'Blusa de neoprene Johnn Brava da linha Supreme para esportes aquáticos.', { Marca: 'Johnn Brava', Modelo: 'Supreme', Material: 'Neoprene' }],
+  [/\bjohnn brava lycra preta uv\b/, 'Roupas', 'Camiseta de lycra preta Johnn Brava para atividades na água e ao ar livre.', { Marca: 'Johnn Brava', Cor: 'Preta' }],
+  [/\bjohnn brava sunga neo\b/, 'Roupas', 'Sunga Johnn Brava da linha Neo. A ficha mostra os tamanhos disponíveis para escolher.', { Marca: 'Johnn Brava', Linha: 'Neo' }],
+  [/\bkit mascara oculos mergulho snorkel respirador\b/, 'Óculos', 'Conjunto com máscara de mergulho e snorkel para respiração na superfície.'],
+  [/\btampa de acesso casco jet original sea doo\b/, 'Acessórios', 'Tampa para o ponto de acesso do casco de jet ski Sea-Doo. Confira as medidas e o código da peça para o seu modelo.', { Marca: 'Sea-Doo' }],
+  [/\btanque externo com suporte jet cooler\b/, 'Acessórios', 'Tanque externo acompanhado de suporte da linha Jet Cooler. Confirme a capacidade e o encaixe com a Usina antes da compra.'],
 ]
 
 const categoryPatterns = [
