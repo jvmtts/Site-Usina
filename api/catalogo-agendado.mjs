@@ -4,9 +4,9 @@ import { catalogSettings, storage } from '../server/catalog/settings.mjs'
 import { produtos } from '../src/data/produtos-base.mjs'
 
 export const POST = handleSchedule(async () => {
-  if (process.env.VERCEL_ENV !== 'production') return
+  if (!['production', 'preview'].includes(process.env.VERCEL_ENV)) return
   const result = await catalogService(storage(), catalogSettings(), produtos).synchronize()
-  if (result === 'sync_failed' || result === 'wrong_company') {
+  if (result === 'disconnected' || result === 'wrong_company' || result === 'sync_failed') {
     throw new Error('Falha na coleta agendada do catálogo da Usina.')
   }
 })
