@@ -129,6 +129,7 @@ function Vitrine() {
   const [busca, setBusca] = useState(() => sessionStorage.getItem('catalogBusca') || '')
   const [categoria, setCategoria] = useState(() => sessionStorage.getItem('catalogCategoria') || 'Todos')
   const [limite, setLimite] = useState(getInitialCatalogLimit)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [searchActive, setSearchActive] = useState(() => Boolean(busca))
   const inputRef = useRef<HTMLInputElement>(null)
   const searchToggleRef = useRef<HTMLButtonElement>(null)
@@ -205,6 +206,7 @@ function Vitrine() {
   const hasMore = limite < filtrados.length
 
   useEffect(() => {
+    setLoadingMore(false)
     const end = catalogEnd.current
     if (!end || !hasMore) return
 
@@ -213,15 +215,23 @@ function Vitrine() {
       return
     }
 
+    let loadTimer: number | undefined
     const observer = new IntersectionObserver(entries => {
-      if (!entries.some(entry => entry.isIntersecting)) return
+      if (loadTimer !== undefined || !entries.some(entry => entry.isIntersecting)) return
       observer.disconnect()
-      setLimite(current => Math.min(current + CATALOG_BATCH_SIZE, filtrados.length))
-    }, { rootMargin: '0px 0px 420px' })
+      setLoadingMore(true)
+      loadTimer = window.setTimeout(() => {
+        setLimite(current => Math.min(current + CATALOG_BATCH_SIZE, filtrados.length))
+        setLoadingMore(false)
+      }, 500)
+    }, { rootMargin: '0px 0px -64px' })
 
     observer.observe(end)
-    return () => observer.disconnect()
-  }, [filtrados.length, hasMore, limite])
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(loadTimer)
+    }
+  }, [activeCategory, busca, filtrados.length, hasMore, limite])
 
   const changeSearch = (value: string) => {
     setBusca(value)
@@ -363,7 +373,16 @@ function Vitrine() {
           </div>
         )}
 
-        {hasMore && <div ref={catalogEnd} className="catalog-end" aria-hidden="true" />}
+        {hasMore && (
+          <div ref={catalogEnd} className="catalog-end" role="status">
+            {loadingMore && (
+              <>
+                <span className="catalog-loading-ring" aria-hidden="true" />
+                <span className="sr-only">Carregando mais produtos…</span>
+              </>
+            )}
+          </div>
+        )}
       </section>
 
       <ScrollToTopButton />
