@@ -4,6 +4,7 @@ import { Link, Routes, Route, useNavigate, useParams } from 'react-router-dom'
 import { ArrowDown, ArrowLeft, ArrowUp, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, ImageOff, Search, X, ZoomIn } from 'lucide-react'
 import type { Produto } from '@/data/produtos'
 import { useCatalog } from '@/catalog/catalogContext'
+import { formatCatalogPrice } from '@/catalog/formatCatalogPrice'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import './Catalog.css'
 
@@ -74,9 +75,7 @@ function CardProduto({ produto, priority }: { produto: Produto; priority: boolea
   const images = (produto.imagens.length ? produto.imagens : Object.values(produto.imagensPorCor ?? {})[0] ?? [])
     .filter(src => src && !src.includes('via.placeholder.com'))
   const [primary, alternative] = images
-  const price = typeof produto.preco === 'number'
-    ? produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    : produto.preco
+  const price = formatCatalogPrice(produto.preco)
 
   const rememberScroll = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return
@@ -481,11 +480,6 @@ function DetalheProduto() {
     )
   }
 
-  const formatarPreco = (p: string | number) =>
-    typeof p === 'number'
-      ? p.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      : p || 'R$ 0,00'
-
   const mudarImagem = (acao: 'next' | 'prev' | number) => {
     setZoomIn(false)
     if (acao === 'next')      { setDirection(1);  setImgAtiva(p => (p + 1) % imagens.length) }
@@ -501,8 +495,11 @@ function DetalheProduto() {
   if (tamSel && tamSel !== 'Único') variaveisTexto += `, tamanho ${tamSel}`
   if (lenteSel) variaveisTexto += `, lente ${lenteSel}`
   if (chosenOption) variaveisTexto = ' — ' + chosenOption.label
-  const waLink = `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Tenho interesse no produto: ${produto.nome}${variaveisTexto}`)}`
-  const mlLink = produto.linkMercadoLivre
+  const selectedPrice = chosenOption ? chosenOption.price : produto.preco
+  const consultPrice = selectedPrice === null
+  const intent = consultPrice ? 'Gostaria de consultar o preço de' : 'Tenho interesse no produto:'
+  const waLink = `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! ${intent} ${produto.nome}${variaveisTexto}`)}`
+  const mlLink = consultPrice ? undefined : produto.linkMercadoLivre
 
   const slideVariants = {
     enter:  (d: number) => ({ x: d > 0 ? 36 : -36, opacity: 0 }),
@@ -637,7 +634,7 @@ function DetalheProduto() {
               </h1>
 
               <p className="catalog-detail-price">
-                {formatarPreco(chosenOption?.price ?? produto.preco)}
+                {formatCatalogPrice(selectedPrice)}
               </p>
 
               {chosenOption && (
@@ -682,15 +679,16 @@ function DetalheProduto() {
 
               <section className="catalog-purchase-panel" aria-labelledby="catalog-purchase-title">
                 <div className="catalog-purchase-heading">
-                  <span className="catalog-purchase-kicker">Comprar agora</span>
-                  <h2 id="catalog-purchase-title">Escolha onde comprar.</h2>
+                  <span className="catalog-purchase-kicker">{consultPrice ? 'Atendimento' : 'Comprar agora'}</span>
+                  <h2 id="catalog-purchase-title">{consultPrice ? 'Consulte o preço pelo WhatsApp' : 'Escolha onde comprar.'}</h2>
                 </div>
 
                 <div className="catalog-purchase-options">
                   <a
                     href={waLink} target="_blank" rel="noopener noreferrer"
                     className="catalog-purchase-card catalog-purchase-card-whatsapp"
-                    aria-label={mlLink ? 'Comprar pelo WhatsApp com até 8% OFF no PIX' : 'Consultar e comprar pelo WhatsApp'}
+                    aria-label={consultPrice ? 'Consultar preço pelo WhatsApp' :
+                      mlLink ? 'Comprar pelo WhatsApp com até 8% OFF no PIX' : 'Consultar e comprar pelo WhatsApp'}
                   >
                     <span className="catalog-purchase-brand catalog-purchase-brand-whatsapp" aria-hidden="true">
                       <WhatsappIcon />

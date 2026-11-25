@@ -17,7 +17,7 @@ function validInventory(value: unknown): value is Inventory {
         typeof product.disponivel !== 'boolean' || !Array.isArray(product.imagens) ||
         !product.imagens.every(src => typeof src === 'string') ||
         (typeof product.categoria !== 'string' && !Array.isArray(product.categoria)) ||
-        (typeof product.preco !== 'string' && !Number.isFinite(product.preco))) return false
+        (product.preco !== null && typeof product.preco !== 'string' && !Number.isFinite(product.preco))) return false
     known.add(String(product.id))
     return true
   })

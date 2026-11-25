@@ -1,10 +1,10 @@
 export interface Produto {
   id: number | string;
   sku?: string;
-  opcoesEstoque?: { id: string; label: string; price: number }[];
+  opcoesEstoque?: { id: string; label: string; price: number | null }[];
   nome: string;
   categoria: string | string[];
-  preco: string | number;
+  preco: string | number | null;
   descricao?: string;
   fichaTecnica?: Record<string, string>;
   imagens: string[];

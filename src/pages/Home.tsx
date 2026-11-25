@@ -27,6 +27,7 @@ import {
 import { patrocinadores, type Patrocinador } from '../data/patrocinadores'
 import type { Produto } from '../data/produtos'
 import { useCatalog } from '../catalog/catalogContext'
+import { formatCatalogPrice } from '../catalog/formatCatalogPrice'
 import BrandIntro from '../components/BrandIntro'
 import HeroMedia from '../components/HeroMedia'
 import { EXPEDITION_PATH } from '../config/routes'
@@ -900,9 +901,7 @@ function ServicesSection() {
                                 <span className="services-product-copy">
                                   <small className="mono">{getProductCategory(product)}</small>
                                   <strong>{product.nome}</strong>
-                                  <span>{typeof product.preco === 'number'
-                                    ? product.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-                                    : product.preco}</span>
+                                  <span>{formatCatalogPrice(product.preco)}</span>
                                 </span>
                                 <ArrowUpRight aria-hidden="true" size={18} />
                               </Link>

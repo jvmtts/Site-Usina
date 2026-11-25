@@ -9,7 +9,7 @@ const stock = product => Number.isFinite(product.estoque?.quantidade_disponivel)
   ? product.estoque.quantidade_disponivel : null
 const sellingPrice = (product, fallback) => {
   const value = product.estoque?.valor_venda ?? fallback
-  return Number.isFinite(value) && value > 0 && value <= 100_000_000 ? Math.round(value * 100) / 100 : null
+  return Number.isFinite(value) && value >= 0.005 && value <= 100_000_000 ? Math.round(value * 100) / 100 : null
 }
 const publicId = id => 'ca-' + createHash('sha256').update(id).digest('hex').slice(0, 24)
 const active = product => product.ativo !== false && product.status !== 'INATIVO'
@@ -38,6 +38,23 @@ const preferredCatalogCategory = new Map([
 
 function imagesFrom(product) {
   return Array.isArray(product.imagens) ? product.imagens : []
+}
+
+const technicalFields = [
+  ['peso_liquido', 'Peso líquido', 'kg'],
+  ['altura', 'Altura', 'cm'],
+  ['largura', 'Largura', 'cm'],
+  ['profundidade', 'Profundidade', 'cm'],
+]
+
+function specifications(detail) {
+  const brand = shortText(detail.ecommerce?.marca?.descricao || detail.ecommerce?.marca?.nome)
+  const specs = brand ? { Marca: brand } : {}
+  for (const [field, label, unit] of technicalFields) {
+    const value = detail.pesos_dimensoes?.[field]
+    if (Number.isFinite(value) && value > 0) specs[label] = value.toLocaleString('pt-BR') + ' ' + unit
+  }
+  return specs
 }
 
 function variantIdsFrom(item, detail) {
@@ -77,6 +94,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   for (const id of Object.keys(bindings)) if (!manualIDs.has(id)) delete bindings[id]
   const claimed = parseBindings(bindings, manual)
   const items = await client.list()
+  const itemsById = new Map(items.map(item => [item.id, item]))
 
   const detailCache = new Map()
   const detailFor = id => {
@@ -93,7 +111,10 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   const found = new Map(details.map(record => [record.item.id, record]))
   const suggestions = new Map()
   const withheld = new Set()
-  const report = { received: items.length, examined: details.length, published: 0, linked: 0, review: [], withoutPhoto: [], unmatchedLocal: [] }
+  const report = {
+    received: items.length, examined: details.length, published: 0, linked: 0,
+    review: [], withoutPrice: [], withoutPhoto: [], unmatchedLocal: [],
+  }
   const note = (item, reason) => report.review.push({
     id: item.id, sku: shortText(item.codigo), name: shortText(item.nome), reason,
   })
@@ -152,29 +173,37 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
       return { hidden: id }
     }
     const name = shortText(local?.nome || detail.nome || item.nome)
+    const sku = shortText(detail.codigo_sku ?? item.codigo)
     const isGroup = variants.length > 0 || detail.formato === 'VARIACAO'
     const children = await loadInBatches(variants, 4, async child => ({
       child, detail: await detailFor(child.id),
     }))
     const options = []
+    const missingPrices = []
     for (const { child, detail: option } of children) {
-      const quantity = stock(option)
-      const price = sellingPrice(option, child.valor_venda)
-      if (!active(option) || child.status === 'INATIVO' || !(quantity > 0) || price === null) continue
+      if (!active(option) || child.status === 'INATIVO' || !(stock(option) > 0)) continue
       const label = variantLabel(child, option)
-      if (label) options.push({ id: publicId(child.id), label, price })
+      if (!label) continue
+      const price = sellingPrice(option, child.valor_venda)
+      options.push({ id: publicId(child.id), label, price })
+      if (price === null) missingPrices.push({
+        id: child.id, name: name + ' · ' + label,
+        sku: shortText(option.codigo_sku ?? child.codigo_sku ?? child.codigo ?? itemsById.get(child.id)?.codigo),
+      })
     }
     const available = stock(detail)
-    const price = isGroup
-      ? (options.length ? Math.min(...options.map(option => option.price)) : null)
-      : sellingPrice(detail, item.valor_venda)
-    if (!name || price === null || (isGroup ? !options.length : !(available > 0))) {
+    if (!name || (isGroup ? !options.length : !(available > 0))) {
       note(item, !name ? 'nome ausente' :
-        isGroup ? 'sem variação confirmada com preço e saldo' :
-          available === null ? 'saldo disponível ausente na API' :
-            available <= 0 ? 'sem saldo disponível' : 'preço inválido')
+        isGroup ? 'sem variação com saldo confirmado' :
+          available === null ? 'saldo disponível ausente na API' : 'sem saldo disponível')
       return { hidden: id }
     }
+    const optionPrices = options.flatMap(option => option.price === null ? [] : [option.price])
+    const price = isGroup
+      ? (optionPrices.length ? Math.min(...optionPrices) : null)
+      : sellingPrice(detail, item.valor_venda)
+    if (!isGroup && price === null) missingPrices.push({ id: item.id, name, sku })
+    report.withoutPrice.push(...missingPrices)
     const localImages = (local?.imagens ?? []).filter(src => typeof src === 'string' && !src.includes('via.placeholder.com'))
     let images = localImages
     if (!images.length && !Object.keys(local?.imagensPorCor ?? {}).length) {
@@ -185,15 +214,15 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
         if (path && !cached.includes(path)) cached.push(path)
       }
       images = cached
-      if (!images.length) report.withoutPhoto.push({ id: item.id, name, sku: shortText(item.codigo) })
+      if (!images.length) report.withoutPhoto.push({ id: item.id, name, sku })
     }
     const category = shortText(detail.categoria?.descricao) || 'Equipamentos'
-    const brand = shortText(detail.ecommerce?.marca?.descricao || detail.ecommerce?.marca?.nome)
     const description = shortText(local?.descricao || detail.ecommerce?.descricao_adicional || detail.descricao, 6000)
+    const specs = { ...specifications(detail), ...local?.fichaTecnica }
     return {
       product: {
         ...(local && {
-          categoria: local.categoria, fichaTecnica: local.fichaTecnica, variacoes: local.variacoes,
+          variacoes: local.variacoes,
           tamanhosPorCor: local.tamanhosPorCor, lentesPorCor: local.lentesPorCor,
           imagensPorCor: local.imagensPorCor, linkwhatsapp: local.linkwhatsapp,
           linkWhatsapp: local.linkWhatsapp, linkMercadoLivre: local.linkMercadoLivre,
@@ -201,7 +230,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
         id, nome: name,
         categoria: local?.categoria ?? preferredCatalogCategory.get(normalized(category)) ?? category,
         preco: price, descricao: description || undefined, imagens: images, disponivel: true,
-        fichaTecnica: local?.fichaTecnica ?? (brand ? { Marca: brand } : undefined),
+        fichaTecnica: Object.keys(specs).length ? specs : undefined,
         opcoesEstoque: options.length ? options : undefined,
       },
     }
@@ -218,5 +247,6 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   report.published = imported.filter(record => record.product).length
   report.linked = Object.keys(bindings).length
   report.review.sort((a,b) => a.name.localeCompare(b.name,'pt-BR'))
+  report.withoutPrice.sort((a,b) => a.name.localeCompare(b.name,'pt-BR'))
   return { updatedAt: now.toISOString(), catalog, hiddenIds, bindings, report }
 }

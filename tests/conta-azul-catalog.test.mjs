@@ -73,6 +73,36 @@ test('renders only available real variations and chooses the lowest available pr
   assert.equal(snapshot.report.withoutPhoto.length, 1)
 })
 
+test('lists in-stock products and variants for consultation without treating missing prices as zero', async () => {
+  const simple = item(20, 'Cabo retrátil')
+  const soldOut = item(21, 'Boia sem saldo')
+  const unknownStock = item(22, 'Cabo sem saldo confirmado')
+  const priced = item(23, 'Colete M')
+  const unpriced = item(24, 'Colete G')
+  const group = item(25, 'Colete')
+  const snapshot = await buildSnapshot({
+    client: clientFor([simple, soldOut, unknownStock, priced, unpriced, group], new Map([
+      [simple.id, detail(simple, 1, undefined)],
+      [soldOut.id, detail(soldOut, 0, undefined)],
+      [unknownStock.id, detail(unknownStock, undefined, undefined)],
+      [priced.id, detail(priced, 1, 125)],
+      [unpriced.id, detail(unpriced, 2, 0)],
+      [group.id, detail(group, 0, 90, { formato: 'VARIACAO', variacao: {
+        produtos: [{ id: priced.id, opcoes: [{ descricao: 'M' }] }, { id: unpriced.id, opcoes: [{ descricao: 'G' }] }],
+      } })],
+    ])),
+    manual: [],
+  })
+
+  assert.deepEqual(snapshot.catalog.map(product => [product.nome, product.preco]), [
+    ['Cabo retrátil', null], ['Colete', 125],
+  ])
+  assert.deepEqual(snapshot.catalog[1].opcoesEstoque.map(option => [option.label, option.price]), [
+    ['M', 125], ['G', null],
+  ])
+  assert.deepEqual(snapshot.report.withoutPrice.map(row => row.sku), [simple.codigo, unpriced.codigo])
+})
+
 test('uncertain and unmatched manual products stay hidden until stock can be verified', async () => {
   const first = item(1, 'Âncora duplicada')
   const second = item(2, 'Ancora duplicada')

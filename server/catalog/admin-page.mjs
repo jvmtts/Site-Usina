@@ -79,6 +79,7 @@ function integrationScreen(status, redirectUri) {
     (report ? '<p><strong>' + esc(report.published) + '</strong> publicados de ' + esc(report.received) +
       ' cadastros ativos. ' + esc(report.linked) + ' vínculos com o site.</p>' +
       (typeof report.examined === 'number' ? '<p>Produtos principais consultados: ' + esc(report.examined) + '.</p>' : '') +
+      reportList('Preços a preencher', report.withoutPrice) +
       reportList('Produtos em revisão', report.review) + reportList('Produtos sem foto', report.withoutPhoto) +
       reportList('Produtos do site sem vínculo', report.unmatchedLocal) : '') +
     '</section><form method="post" action="/api/catalogo-admin">' + button('logout', 'Sair', { secondary: true }) + '</form>'
