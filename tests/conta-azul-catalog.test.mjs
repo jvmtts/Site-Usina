@@ -1,7 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { authorizationUrl, exchangeToken, inventoryClient } from '../server/catalog/conta-azul.mjs'
+import { productContent } from '../server/catalog/product-content.mjs'
 import { buildSnapshot } from '../server/catalog/snapshot.mjs'
+import { produtos } from '../src/data/produtos-base.mjs'
 
 const uuid = n => '00000000-0000-4000-8000-' + String(n).padStart(12,'0')
 const item = (n, name, extra = {}) => ({ id: uuid(n), nome: name, codigo: 'SKU-' + n, tipo: 'PRODUTO', status: 'ATIVO', ...extra })
@@ -16,6 +18,26 @@ const local = (name, id = 1) => ({
 })
 const clientFor = (rows, details) => ({ list: async () => rows, detail: async id => details.get(id) })
 const noPhoto = async () => null
+
+test('reuses the store photos for the confirmed hull, side, color and single option', () => {
+  const legacy = new Map(produtos.map(product => [product.id, product]))
+  const normalize = value => value.trim().toLowerCase()
+  const photos = (id, options = []) => productContent(id, '', legacy, normalize, options).images
+  const rightGti = 'ca-93dd9253a5ecfd62370619ee'
+  const leftGti = 'ca-f83c2bac5f836a97aa99dc31'
+  const leftSt3 = 'ca-b0805e4068fdc9d7c0d69aec'
+  const sandBlue = 'ca-1ef2211200e4bc048954f85c'
+  const hakan = 'ca-ec41a19b99811a9a5cc58b71'
+  const blueLenses = { label: 'Preto e Branco com Lentes azul' }
+
+  assert.deepEqual(photos(rightGti), legacy.get(24).imagensPorCor.Direito)
+  assert.deepEqual(photos(leftGti), legacy.get(24).imagensPorCor.Esquerdo)
+  assert.deepEqual(photos(leftSt3), legacy.get(25).imagensPorCor.Esquerdo)
+  assert.deepEqual(photos(sandBlue, [{ label: 'G1 / Sand Blue' }]), legacy.get(35).imagensPorCor['Sand Blue'])
+  assert.equal(photos(sandBlue, [{ label: 'G1 / Skyline' }]), undefined)
+  assert.deepEqual(photos(hakan, [blueLenses]), legacy.get(30).imagens)
+  assert.equal(photos(hakan, [blueLenses, { label: 'Preto' }]), undefined)
+})
 
 test('prioritizes available stock, keeps legacy URLs, and imports active retail products', async () => {
   const anchor = item(1, 'Ancora inox')

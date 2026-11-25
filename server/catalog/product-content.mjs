@@ -9,6 +9,13 @@ const photoMatches = new Map([
   ['ca-16a5f241f56f0fa16ab09487', [17, 'Rosa']],
   ['ca-48da01df4fd59c3f17a8e128', [18, 'Dinos']],
   ['ca-edda80654ccbe8f5141f8d17', [18, 'Unicórnio']],
+  ['ca-93dd9253a5ecfd62370619ee', [24, 'Direito']],
+  ['ca-f83c2bac5f836a97aa99dc31', [24, 'Esquerdo']],
+  ['ca-de03c72d58f7bc004d8c29ec', [25, 'Direito']],
+  ['ca-b0805e4068fdc9d7c0d69aec', [25, 'Esquerdo']],
+  ['ca-1ef2211200e4bc048954f85c', [35, 'Sand Blue']],
+  ['ca-f5fbd72c8fd0166230b13451', [35, 'Deepline']],
+  ['ca-ec41a19b99811a9a5cc58b71', [30, undefined, 'Preto e Branco com Lentes azul']],
 ])
 
 const productFamilies = [
@@ -59,13 +66,17 @@ const categoryPatterns = [
 
 export function productContent(id, normalizedName, legacyById, normalize, options) {
   const [, category, description, specs] = productFamilies.find(([pattern]) => pattern.test(normalizedName)) ?? []
-  const [photoId, color] = photoMatches.get(id) ?? []
+  const [photoId, color, optionLabel] = photoMatches.get(id) ?? []
   const source = legacyById.get(photoId)
-  const hasMatchingColor = !color || options.every(option => normalize(option.label).split(' ').includes(normalize(color)))
+  const hasMatchingColor = !color || options.every(option =>
+    (' ' + normalize(option.label) + ' ').includes(' ' + normalize(color) + ' '))
+  const hasMatchingOption = !optionLabel || (options.length === 1 && normalize(options[0].label) === normalize(optionLabel))
   return {
     category: category ?? categoryPatterns.find(([pattern]) => pattern.test(normalizedName))?.[1],
     description,
     specs,
-    images: hasMatchingColor ? (color ? source?.imagensPorCor?.[color] : source?.imagens) : undefined,
+    images: hasMatchingColor && hasMatchingOption
+      ? color ? source?.imagensPorCor?.[color] : source?.imagens
+      : undefined,
   }
 }
