@@ -81,6 +81,7 @@ function integrationScreen(status, redirectUri) {
       (typeof report.examined === 'number' ? '<p>Produtos principais consultados: ' + esc(report.examined) + '.</p>' : '') +
       reportList('Preços a preencher', report.withoutPrice) +
       reportList('Produtos em revisão', report.review) + reportList('Produtos sem foto', report.withoutPhoto) +
+      reportList('Produtos sem descrição confirmada', report.withoutDescription) +
       reportList('Produtos do site sem vínculo', report.unmatchedLocal) : '') +
     '</section><form method="post" action="/api/catalogo-admin">' + button('logout', 'Sair', { secondary: true }) + '</form>'
 }

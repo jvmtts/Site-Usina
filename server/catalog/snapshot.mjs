@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { identifier } from './conta-azul.mjs'
+import { productContent } from './product-content.mjs'
 
 const sellableType = new Set(['MERCADORIA_PARA_REVENDA', 'PRODUTO_ACABADO'])
 const shortText = (value, size = 180) => typeof value === 'string' ? value.trim().slice(0, size) : ''
@@ -91,6 +92,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   const bindings = { ...previousBindings, ...configuredBindings }
   parseBindings(configuredBindings, manual)
   const manualIDs = new Set(manual.map(product => String(product.id)))
+  const legacyById = new Map(manual.map(product => [product.id, product]))
   for (const id of Object.keys(bindings)) if (!manualIDs.has(id)) delete bindings[id]
   const claimed = parseBindings(bindings, manual)
   const items = await client.list()
@@ -113,7 +115,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   const withheld = new Set()
   const report = {
     received: items.length, examined: details.length, published: 0, linked: 0,
-    review: [], withoutPrice: [], withoutPhoto: [], unmatchedLocal: [],
+    review: [], withoutPrice: [], withoutPhoto: [], withoutDescription: [], unmatchedLocal: [],
   }
   const note = (item, reason) => report.review.push({
     id: item.id, sku: shortText(item.codigo), name: shortText(item.nome), reason,
@@ -204,7 +206,9 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
       : sellingPrice(detail, item.valor_venda)
     if (!isGroup && price === null) missingPrices.push({ id: item.id, name, sku })
     report.withoutPrice.push(...missingPrices)
-    const localImages = (local?.imagens ?? []).filter(src => typeof src === 'string' && !src.includes('via.placeholder.com'))
+    const supplemental = productContent(id, normalized(detail.nome || item.nome), legacyById, normalized, options)
+    const localImages = (local?.imagens ?? supplemental.images ?? [])
+      .filter(src => typeof src === 'string' && !src.includes('via.placeholder.com'))
     let images = localImages
     if (!images.length && !Object.keys(local?.imagensPorCor ?? {}).length) {
       const candidates = imagesFrom(detail).slice(0, 3)
@@ -217,8 +221,11 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
       if (!images.length) report.withoutPhoto.push({ id: item.id, name, sku })
     }
     const category = shortText(detail.categoria?.descricao) || 'Equipamentos'
+    const resolvedCategory = ['outras', 'equipamentos'].includes(normalized(category)) ? supplemental.category || category : category
     const description = shortText(local?.descricao || detail.ecommerce?.descricao_adicional || detail.descricao, 6000)
-    const specs = { ...specifications(detail), ...local?.fichaTecnica }
+      || supplemental.description
+    if (!description) report.withoutDescription.push({ id: item.id, name, sku })
+    const specs = { ...supplemental.specs, ...specifications(detail), ...local?.fichaTecnica }
     return {
       product: {
         ...(local && {
@@ -228,7 +235,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
           linkWhatsapp: local.linkWhatsapp, linkMercadoLivre: local.linkMercadoLivre,
         }),
         id, nome: name,
-        categoria: local?.categoria ?? preferredCatalogCategory.get(normalized(category)) ?? category,
+        categoria: local?.categoria ?? preferredCatalogCategory.get(normalized(resolvedCategory)) ?? resolvedCategory,
         preco: price, descricao: description || undefined, imagens: images, disponivel: true,
         fichaTecnica: Object.keys(specs).length ? specs : undefined,
         opcoesEstoque: options.length ? options : undefined,
