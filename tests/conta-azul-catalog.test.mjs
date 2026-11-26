@@ -94,6 +94,19 @@ test('recognizes ERP color and size attributes on native product variations', as
   assert.deepEqual(product.imagensPorCor.Azul, ['/api/catalogo-imagem/azul'])
 })
 
+test('collects a photo on an available option even when the ERP only has one variation dimension', async () => {
+  const parent = item(92, 'Camiseta')
+  const child = item(93, 'Camiseta preta')
+  const snapshot = await buildSnapshot({ manual: [], client: clientFor([parent, child], new Map([
+    [parent.id, detail(parent, 0, 0, { formato: 'VARIACAO', variacao: {
+      produtos: [{ id: child.id, opcoes: [{ descricao: 'Preta' }] }],
+    } })],
+    [child.id, detail(child, 1, 90, { imagens: [{ id: 'preta' }] })],
+  ])), imageFor: async photo => '/api/catalogo-imagem/' + photo.id })
+  assert.deepEqual(snapshot.catalog[0].imagens, ['/api/catalogo-imagem/preta'])
+  assert.deepEqual(snapshot.catalog[0].opcoesEstoque[0].images, ['/api/catalogo-imagem/preta'])
+})
+
 test('prioritizes available stock, keeps legacy URLs, and imports active retail products', async () => {
   const anchor = item(1, 'Ancora inox')
   const lifejacket = item(2, 'Colete Jet')

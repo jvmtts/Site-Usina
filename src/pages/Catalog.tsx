@@ -486,12 +486,16 @@ function DetalheProduto() {
   }, [corAtual, id]) // eslint-disable-line
 
   const variantImages = corAtual ? produto?.imagensPorCor?.[corAtual] : undefined
-  const imagens = stock && produto ? resolveStockGallery(produto, stock.color) :
-    (variantImages ?? produto?.imagens ?? []).filter(src => src && !src.includes('via.placeholder.com'))
+  const optionPhotographs = new Set(stockOptions.flatMap(option => option.images ?? []))
+  const genericImages = (produto?.imagens ?? []).filter(src => !optionPhotographs.has(src))
+  const fallbackImages = stock && produto ? resolveStockGallery({ ...produto, imagens: genericImages }, stock.color) :
+    variantImages ?? genericImages
+  const imagens = (chosenOption?.images ?? fallbackImages)
+    .filter(src => src && !src.includes('via.placeholder.com'))
   const activeImageIndex = imgAtiva < imagens.length ? imgAtiva : 0
   const activeImage = imagens[activeImageIndex]
 
-  useEffect(() => { setImgAtiva(0) }, [corAtual, stock?.color])
+  useEffect(() => { setImgAtiva(0) }, [corAtual, stock?.color, chosenOption?.id])
 
   if (stock && (currentStockChoice?.color !== stock.color || currentStockChoice?.size !== stock.size)) {
     chooseStock({ color: stock.color, size: stock.size })

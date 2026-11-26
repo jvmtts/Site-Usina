@@ -135,6 +135,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   const withheld = new Set()
   const report = {
     received: items.length, examined: details.length, published: 0, linked: 0,
+    recordsWithPhotoEntries: reviewed.filter(({ detail }) => imagesFrom(detail).length).length,
     review: [], withoutPrice: [], withoutPhoto: [], withoutDescription: [], unmatchedLocal: [],
   }
   const note = (item, reason) => report.review.push({
@@ -211,14 +212,13 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
     const options = []
     const missingPrices = []
     const attributes = variantAttributes(detail.variacao)
-    const hydro = /\bhydro citrus\b/.test(normalized(name))
     for (const { child, detail: option } of children) {
       if (!active(option) || child.status === 'INATIVO' || !(stock(option) > 0)) continue
       const label = variantLabel(child, option)
       if (!label) continue
       const price = sellingPrice(option, child.valor_venda)
       const dimensions = variantDimensions(child, attributes)
-      const images = dimensions.color || hydro ? await cachedImagesFor(option) : []
+      const images = await cachedImagesFor(option)
       options.push({ id: publicId(child.id), label, price, ...dimensions, ...(images.length && { images }) })
       if (price === null) missingPrices.push({
         id: child.id, name: name + ' · ' + label,
@@ -242,7 +242,8 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
     const localImages = (local?.imagens ?? supplemental.images ?? [])
       .filter(src => typeof src === 'string' && !src.includes('via.placeholder.com'))
     const erpImages = await cachedImagesFor(detail)
-    const images = erpImages.length ? erpImages : localImages
+    const images = erpImages.length ? erpImages : localImages.length ? localImages :
+      options.find(option => option.images?.length)?.images ?? []
     const erpByColor = new Map()
     for (const option of options) {
       if (option.color && option.images?.length && !erpByColor.has(option.color)) {

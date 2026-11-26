@@ -89,10 +89,10 @@ export function catalogService(store, config, manual, { exchange = exchangeToken
             imageFor: photos.cache,
             now: new Date(started),
           })
-          const erpPhotos = photos.diagnostics()
+          const erpPhotos = { ...photos.diagnostics(), reportedRecords: snapshot.report.recordsWithPhotoEntries }
           snapshot.report.erpPhotos = erpPhotos
           await write({ snapshot, ...photos.publication(snapshot), sync: { state: 'updated', attempt } })
-          if (erpPhotos.candidates && process.env.VERCEL_ENV === 'preview') {
+          if (process.env.VERCEL_ENV === 'preview') {
             console.info('catalogo.fotos.conta-azul', JSON.stringify(erpPhotos))
           }
           return 'updated'

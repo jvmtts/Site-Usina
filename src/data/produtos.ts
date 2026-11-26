@@ -2,7 +2,7 @@ export interface Produto {
   id: number | string;
   aliases?: string[];
   sku?: string;
-  opcoesEstoque?: { id: string; label: string; price: number | null; color?: string; size?: string }[];
+  opcoesEstoque?: { id: string; label: string; price: number | null; color?: string; size?: string; images?: string[] }[];
   nome: string;
   categoria: string | string[];
   preco: string | number | null;
