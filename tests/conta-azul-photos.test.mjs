@@ -134,6 +134,24 @@ test('published images are available only while referenced by a fresh catalog', 
   assert.equal(await publicCatalogPhoto(store, 'invalid', timestamp), null)
 })
 
+test('downloads images from the Conta Azul short domain and follows only an approved photo destination', async () => {
+  const store = memoryStore()
+  const requests = []
+  const cache = catalogPhotoCache(store, null, timestamp + 60_000, {
+    now: () => timestamp,
+    fetcher: (url, options) => {
+      requests.push(url.hostname)
+      assert.equal(new Headers(options.headers).has('authorization'), false)
+      if (url.hostname !== 'conta.click') return imageResponse()
+      const destination = url.pathname === '/foto' ? photo.url_imagem : 'https://images.example.com/'
+      return new Response(null, { status: 302, headers: { Location: destination } })
+    },
+  })
+  assert.match(await cache.cache({ ...photo, url_imagem: 'https://conta.click/foto' }), /^\/api\/catalogo-imagem/)
+  assert.equal(await cache.cache({ ...photo, url_imagem: 'https://conta.click/fora' }), null)
+  assert.deepEqual(requests, ['conta.click', 'catalogo-contaazul.s3.sa-east-1.amazonaws.com', 'conta.click'])
+})
+
 
 test('a photo used only by an in-stock option remains available from the image endpoint', async () => {
   const store = memoryStore()

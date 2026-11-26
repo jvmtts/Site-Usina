@@ -11,6 +11,7 @@ const assetLifetime = 48 * 60 * 60
 const refreshAfter = 24 * 60 * 60_000
 const requestTimeout = 6_000
 const storageReserve = 8_000
+const contaAzulShortHost = 'conta.click'
 const originHost = /^(?:[a-z0-9][a-z0-9.-]*\.)?s3(?:[.-](?:dualstack\.)?[a-z]{2}(?:-[a-z]+)+-\d+)?\.amazonaws\.com$/
 const cloudFrontHost = /^d[a-z0-9]+\.cloudfront\.net$/
 const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'])
@@ -21,7 +22,7 @@ const assetKey = id => 'photo:' + id
 function permitted(url) {
   const host = url.hostname
   return url.protocol === 'https:' && !url.username && !url.password && !url.port && !url.hash &&
-    (host === 'contaazul.com' || host.endsWith('.contaazul.com') ||
+    (host === contaAzulShortHost || host === 'contaazul.com' || host.endsWith('.contaazul.com') ||
       originHost.test(host) || cloudFrontHost.test(host))
 }
 
@@ -71,6 +72,33 @@ export function catalogPhotoCache(store, previous, deadline, { fetcher = fetch, 
   const stats = { candidates: 0, missingUrl: 0, blockedOrigin: 0, failed: 0, reused: 0, downloaded: 0 }
   let totalBytes = 0
 
+  function trackOrigin(url) {
+    if (url && origins.size < 12 && /^[a-z0-9][a-z0-9.-]{0,252}$/.test(url.hostname) &&
+        url.hostname.includes('.') && !isIP(url.hostname)) origins.add(url.hostname)
+  }
+
+  async function download(url, signal) {
+    if (url.hostname !== contaAzulShortHost) {
+      return readImage(await fetcher(url, { redirect: 'error', signal }))
+    }
+    let destination = url
+    for (let hop = 0; hop <= 2; hop++) {
+      const response = await fetcher(destination, { redirect: 'manual', signal })
+      if (response.status < 300 || response.status >= 400) return readImage(response)
+      const location = response.headers.get('location')
+      await response.body?.cancel()
+      const next = location && location.length <= 8192 && URL.canParse(location, destination)
+        ? new URL(location, destination) : null
+      trackOrigin(next)
+      if (!next || !permitted(next)) {
+        stats.blockedOrigin++
+        return null
+      }
+      destination = next
+    }
+    return null
+  }
+
   function fits(id, size) {
     return assets.has(id) || (assets.size < maxCatalogPhotos && totalBytes + size <= catalogLimit)
   }
@@ -98,8 +126,7 @@ export function catalogPhotoCache(store, previous, deadline, { fetcher = fetch, 
     const timeout = Math.min(requestTimeout, deadline - now() - storageReserve)
     if (timeout > 0 && !(Number(photo.tamanho) > photoLimit)) {
       try {
-        const response = await fetcher(url, { redirect: 'error', signal: AbortSignal.timeout(timeout) })
-        const image = await readImage(response)
+        const image = await download(url, AbortSignal.timeout(timeout))
         if (image) {
           const id = hash(image.bytes)
           const size = image.bytes.byteLength
@@ -133,8 +160,7 @@ export function catalogPhotoCache(store, previous, deadline, { fetcher = fetch, 
       }
 
       const url = value.length <= 8192 && URL.canParse(value) ? new URL(value) : null
-      if (url && origins.size < 12 && /^[a-z0-9][a-z0-9.-]{0,252}$/.test(url.hostname) &&
-          url.hostname.includes('.') && !isIP(url.hostname)) origins.add(url.hostname)
+      trackOrigin(url)
       if (!url || !permitted(url)) {
         stats.blockedOrigin++
         return null
