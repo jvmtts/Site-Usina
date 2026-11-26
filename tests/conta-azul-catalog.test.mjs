@@ -75,6 +75,61 @@ test('shows Hydro Citrus once and keeps only available color and size combinatio
   assert.equal(colete.aliases.length, 4)
 })
 
+test('groups separate registrations by model and exposes only real available options', async () => {
+  const rows = [
+    item(101, 'CALCA MATTOS RACING SPIRIT VERMELHO 48'),
+    item(102, 'CALCA MATTOS RACING SPIRIT VERMELHO 50'),
+    item(103, 'CALCA MATTOS RACING SPIRIT - PLUS SIZE CINZA/FLUOR 52'),
+    item(104, 'CALCA MATTOS RACING SPIRIT - PLUS SIZE CINZA/FLUOR 54'),
+    item(105, 'Colete Salva-Vidas PRO LIFE Infantil Homologado'),
+    item(106, 'COLETE INFANTIL PRO LIFE DINO'),
+    item(107, 'COLETE INFANTIL PRO LIFE UNICORNIO'),
+    item(108, 'Óculos 100% Strata 2 Blue'),
+    item(109, 'Óculos 100% Strata 2 White'),
+    item(110, 'Óculos 100% Strata 2 Juvenil Black'),
+    item(111, 'Óculos 100% Strata 20 White'),
+    item(112, 'Luva Modelo Novo Preto M'),
+    item(113, 'Luva Modelo Novo Preto G'),
+    item(114, 'Luva Modelo Novo Azul P'),
+    item(115, 'Bolsa Estanque 20 litros'),
+    item(116, 'Bolsa Estanque 36 litros'),
+  ]
+  const prices = [null, 279, 299, 309, null, 78, 79, 300, 320, 310, 400, 42, 43, 44, 149, 199]
+  const details = new Map(rows.map((row, index) => [row.id, detail(row, 1, prices[index])]))
+  const dino = item(117, 'Colete Dino')
+  const unicorn = item(118, 'Colete Unicórnio')
+  details.set(dino.id, detail(dino, 1, 89))
+  details.set(unicorn.id, detail(unicorn, 1, 89))
+  details.set(rows[1].id, detail(rows[1], 1, 279, { imagens: [{ id: 'mattos-vermelha' }] }))
+  details.set(rows[3].id, detail(rows[3], 0, 309))
+  details.set(rows[4].id, detail(rows[4], 0, null, { formato: 'VARIACAO', variacao: {
+    produtos: [
+      { id: dino.id, opcoes: [{ descricao: 'DINOS' }] },
+      { id: unicorn.id, opcoes: [{ descricao: 'UNICORNIO' }] },
+    ],
+  } }))
+  const imageFor = async photo => '/api/catalogo-imagem/' + photo.id
+  const snapshot = await buildSnapshot({ client: clientFor(rows, details), manual: [], imageFor })
+  const pants = snapshot.catalog.find(product => product.nome === 'Calça Mattos Racing Spirit')
+  assert.deepEqual(pants.opcoesEstoque.map(option => [option.color, option.size, option.price]), [
+    ['Vermelho', '48', null], ['Vermelho', '50', 279], ['Cinza/Flúor', '52 (Plus Size)', 299],
+  ])
+  assert.deepEqual(pants.opcoesEstoque[1].images, ['/api/catalogo-imagem/mattos-vermelha'])
+  assert.equal(pants.preco, 279)
+  assert.equal(pants.aliases.length, 3)
+  const infant = snapshot.catalog.find(product => /Prolife Infantil/i.test(product.nome))
+  assert.deepEqual(infant.opcoesEstoque.map(option => [option.label, option.price]), [['Dino', 78], ['Unicórnio', 79]])
+  const goggles = snapshot.catalog.find(product => product.nome === 'Óculos 100% Strata 2')
+  assert.deepEqual(goggles.opcoesEstoque.map(option => option.label), ['Blue', 'White'])
+  assert.equal(snapshot.catalog.filter(product => /Strata 2/.test(product.nome)).length, 3)
+  assert.equal(snapshot.catalog.filter(product => /Bolsa Estanque/.test(product.nome)).length, 2)
+  const gloves = snapshot.catalog.find(product => product.nome === 'Luva Modelo Novo')
+  assert.deepEqual(gloves.opcoesEstoque.map(option => [option.color, option.size]), [['Preto', 'M'], ['Preto', 'G'], ['Azul', 'P']])
+
+  const singleton = await buildSnapshot({ client: clientFor([rows[1]], details), manual: [], imageFor })
+  assert.ok(singleton.catalog[0].aliases.includes(pants.id))
+})
+
 test('recognizes ERP color and size attributes on native product variations', async () => {
   const parent = item(90, 'Camisa')
   const child = item(91, 'Camisa azul G')

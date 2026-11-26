@@ -198,7 +198,8 @@ function Vitrine() {
     return products.filter(product => {
       if (product.disponivel === false) return false
       const categories = [product.categoria].flat()
-      const searchable = normalizeSearch([product.nome, product.fichaTecnica?.Marca, ...categories].join(' '))
+      const variations = product.opcoesEstoque?.map(option => option.label) ?? []
+      const searchable = normalizeSearch([product.nome, product.fichaTecnica?.Marca, ...categories, ...variations].join(' '))
       return (activeCategory === 'Todos' || categories.includes(activeCategory)) &&
         terms.every(term => searchable.includes(term))
     })

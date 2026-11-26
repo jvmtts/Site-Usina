@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { identifier } from './conta-azul.mjs'
 import { groupHydroCitrus } from './hydro-citrus.mjs'
 import { productContent } from './product-content.mjs'
+import { groupCatalogVariants } from './variant-families.mjs'
 
 const sellableType = new Set(['MERCADORIA_PARA_REVENDA', 'PRODUTO_ACABADO'])
 const shortText = (value, size = 180) => typeof value === 'string' ? value.trim().slice(0, size) : ''
@@ -282,7 +283,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
     if (record.product) catalog.push(record.product)
     else hiddenIds.push(String(record.hidden))
   }
-  catalog = groupHydroCitrus(catalog, legacyById, normalized)
+  catalog = groupCatalogVariants(groupHydroCitrus(catalog, legacyById, normalized))
   const manualOrder = new Map(manual.map((product, order) => [product.id, order]))
   catalog.sort((left, right) =>
     (manualOrder.get(left.id) ?? Infinity) - (manualOrder.get(right.id) ?? Infinity) ||
