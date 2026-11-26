@@ -960,13 +960,36 @@
 }
 
 .catalog-detail-price {
-  margin: 0 0 2rem;
+  margin: 0;
+}
+
+.catalog-price-value {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 1.75rem;
+  padding: 0.58rem 1rem 0.62rem 0.85rem;
+  border-inline-start: 3px solid #ff7b00;
+  border-radius: 0 10px 10px 0;
+  background: linear-gradient(90deg, #fff0df, #fff8ef 78%, transparent);
   color: #0a0a0a;
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(2.1rem, 3.5vw, 3.25rem);
+  font-size: clamp(1.9rem, 3.5vw, 3.25rem);
   font-weight: 900;
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.045em;
-  line-height: 1;
+  line-height: 1.08;
+  animation: catalog-price-reveal 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.catalog-price-value.is-consultation {
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  letter-spacing: -0.02em;
+}
+
+@keyframes catalog-price-reveal {
+  from { opacity: 0.68; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .catalog-variations {
@@ -1004,6 +1027,7 @@
 
 .catalog-variation-option {
   display: inline-flex;
+  max-width: 100%;
   min-height: 44px;
   align-items: center;
   gap: 0.55rem;
@@ -1015,6 +1039,8 @@
   font-family: 'Inter', sans-serif;
   font-size: 0.8rem;
   font-weight: 650;
+  text-align: start;
+  overflow-wrap: anywhere;
   cursor: pointer;
   transition: border-color 200ms ease, box-shadow 240ms ease, color 200ms ease, transform 240ms ease;
 }
@@ -1030,6 +1056,11 @@
   border-color: #ff7b00;
   color: #111;
   box-shadow: 0 0 0 3px rgba(255, 123, 0, 0.11);
+}
+
+.catalog-variation-option:focus-visible {
+  outline: 2px solid #1d1d1b;
+  outline-offset: 3px;
 }
 
 .catalog-purchase-panel {
@@ -1391,7 +1422,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .catalog-loading-ring {
+  .catalog-loading-ring,
+  .catalog-price-value {
     animation: none;
   }
 
@@ -1429,24 +1461,6 @@
   .catalog-purchase-card:focus-visible {
     transform: none !important;
   }
-}
-
-.catalog-stock-option {
-  display: grid;
-  gap: 0.5rem;
-  margin: 1.2rem 0;
-  color: #27241f;
-  font-weight: 700;
-}
-
-.catalog-stock-option select {
-  min-height: 44px;
-  padding: 0.55rem 0.7rem;
-  border: 1px solid #cbc4b9;
-  border-radius: 7px;
-  background: #fff;
-  color: #191a17;
-  font: inherit;
 }
 
 .catalog-detail-photo-missing {

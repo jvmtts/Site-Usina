@@ -112,7 +112,7 @@ test('groups separate registrations by model and exposes only real available opt
   const snapshot = await buildSnapshot({ client: clientFor(rows, details), manual: [], imageFor })
   const pants = snapshot.catalog.find(product => product.nome === 'Calça Mattos Racing Spirit')
   assert.deepEqual(pants.opcoesEstoque.map(option => [option.color, option.size, option.price]), [
-    ['Vermelho', '48', null], ['Vermelho', '50', 279], ['Cinza/Flúor', '52 (Plus Size)', 299],
+    ['Vermelho', '48', 279], ['Vermelho', '50', 279], ['Cinza/Flúor', '52 (Plus Size)', 299],
   ])
   assert.deepEqual(pants.opcoesEstoque[1].images, ['/api/catalogo-imagem/mattos-vermelha'])
   assert.equal(pants.preco, 279)
@@ -128,6 +128,10 @@ test('groups separate registrations by model and exposes only real available opt
 
   const singleton = await buildSnapshot({ client: clientFor([rows[1]], details), manual: [], imageFor })
   assert.ok(singleton.catalog[0].aliases.includes(pants.id))
+
+  details.set(rows[0].id, detail(rows[0], 1, 269))
+  const withOwnPrice = await buildSnapshot({ client: clientFor(rows.slice(0, 2), details), manual: [], imageFor })
+  assert.equal(withOwnPrice.catalog[0].opcoesEstoque.find(option => option.size === '48').price, 269)
 })
 
 test('recognizes ERP color and size attributes on native product variations', async () => {

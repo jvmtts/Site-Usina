@@ -543,15 +543,24 @@ function DetalheProduto() {
   const intent = consultPrice ? 'Gostaria de consultar o preço de' : 'Tenho interesse no produto:'
   const waLink = `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! ${intent} ${produto.nome}${variaveisTexto}`)}`
   const mlLink = consultPrice || stock ? undefined : produto.linkMercadoLivre
+  const formattedPrice = formatCatalogPrice(selectedPrice)
+  const namedOptions = (values: string[]) => values.map(value => ({ value, label: value }))
   const variationGroups = stock
     ? [
-      { nome: 'Cor', opcoes: stock.colors, selected: stock.color,
+      { nome: 'Cor', opcoes: namedOptions(stock.colors), selected: stock.color,
         onSelect: (color: string) => chooseStock({ color, size: stock.size }) },
-      { nome: 'Tamanho', opcoes: stock.sizes, selected: stock.size,
+      { nome: 'Tamanho', opcoes: namedOptions(stock.sizes), selected: stock.size,
         onSelect: (size: string) => chooseStock({ color: stock.color, size }) },
     ]
-    : chosenOption ? [] : variacoesExibidas.map(({ nome, opcoes }) => ({
-      nome, opcoes, selected: selecoes[nome] || opcoes[0],
+    : chosenOption ? [{
+      nome: stockOptions.every(option => !option.color && (option.size
+        || /^(?:PP|P|M|G{1,3}|XG{1,2}|EG[1-3]?|G[1-4]|XS|S|L|X{1,3}L|\d{1,2}|Único)$/i.test(option.label.trim())))
+        ? 'Tamanho' : stockOptions.every(option => option.color && !option.size) ? 'Cor' : 'Variação',
+      opcoes: stockOptions.map(option => ({ value: option.id, label: option.label })),
+      selected: chosenOption.id,
+      onSelect: setOptionId,
+    }] : variacoesExibidas.map(({ nome, opcoes }) => ({
+      nome, opcoes: namedOptions(opcoes), selected: selecoes[nome] || opcoes[0],
       onSelect: (value: string) => setSelecoes(previous => ({ ...previous, [nome]: value })),
     }))
 
@@ -687,20 +696,13 @@ function DetalheProduto() {
                 {produto.nome}
               </h1>
 
-              {!needsSize && (
-                <p className="catalog-detail-price" aria-live={stock ? 'polite' : undefined}>
-                  {formatCatalogPrice(selectedPrice)}
-                </p>
-              )}
-
-              {!stock && chosenOption && (
-                <label className="catalog-stock-option">
-                  Variações disponíveis
-                  <select value={chosenOption.id} onChange={event => setOptionId(event.target.value)}>
-                    {stockOptions.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
-                  </select>
-                </label>
-              )}
+              <p className="catalog-detail-price" aria-live="polite" aria-atomic="true">
+                {!needsSize && (
+                  <span key={formattedPrice} className={consultPrice ? 'catalog-price-value is-consultation' : 'catalog-price-value'}>
+                    {formattedPrice}
+                  </span>
+                )}
+              </p>
 
               {variationGroups.length > 0 && (
                 <div className="catalog-variations">
@@ -708,20 +710,20 @@ function DetalheProduto() {
                     <div className="catalog-variation-group" key={nome} role="group" aria-label={nome}>
                       <p className="catalog-variation-label">
                         <span>{nome}</span>
-                        {selected && <strong>{selected}</strong>}
+                        {selected && <strong>{opcoes.find(option => option.value === selected)?.label}</strong>}
                       </p>
                       <div className="catalog-variation-options">
-                        {opcoes.map(opcao => {
-                          const ativo = selected === opcao
+                        {opcoes.map(({ value, label }) => {
+                          const ativo = selected === value
                           return (
                             <button
                               type="button"
                               className={`catalog-variation-option${ativo ? ' is-active' : ''}`}
-                              key={opcao}
-                              onClick={() => onSelect(opcao)}
+                              key={value}
+                              onClick={() => onSelect(value)}
                               aria-pressed={ativo}
                             >
-                              {opcao}
+                              {label}
                             </button>
                           )
                         })}

@@ -169,5 +169,18 @@ export function groupCatalogVariants(catalog) {
     const alias = familyId(key)
     if (!family || product.id === alias || product.aliases?.includes(alias)) return product
     return { ...product, aliases: [...(product.aliases ?? []), alias] }
-  })
+  }).map(applyMattosPrice)
+}
+
+function applyMattosPrice(product) {
+  if (normalize(product.nome) !== 'calca mattos racing spirit' || !product.opcoesEstoque) return product
+  const redSize = (option, size) => option.size === size && normalize(option.color ?? '') === 'vermelho'
+  const reference = product.opcoesEstoque.find(option => redSize(option, '50'))
+  if (!reference || reference.price === null) return product
+
+  return {
+    ...product,
+    opcoesEstoque: product.opcoesEstoque.map(option =>
+      redSize(option, '48') && option.price === null ? { ...option, price: reference.price } : option),
+  }
 }
