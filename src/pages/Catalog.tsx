@@ -5,6 +5,7 @@ import { ArrowDown, ArrowLeft, ArrowUp, BadgePercent, ChevronLeft, ChevronRight,
 import type { Produto } from '@/data/produtos'
 import { useCatalog } from '@/catalog/catalogContext'
 import { formatCatalogPrice } from '@/catalog/formatCatalogPrice'
+import { resolveStockGallery, resolveStockSelection, type StockChoice } from '@/catalog/stockSelection'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import './Catalog.css'
 
@@ -408,7 +409,8 @@ function DetalheProduto() {
   useEffect(() => { window.scrollTo(0, 0) }, [id])
 
   const { products, status } = useCatalog()
-  const produto = products.find(product => String(product.id) === id)
+  const produto = products.find(product => String(product.id) === id) ??
+    (id ? products.find(product => Array.isArray(product.aliases) && product.aliases.includes(id)) : undefined)
   const navigationSlot = useRef<HTMLDivElement>(null)
   const [backPinned, setBackPinned] = useState(false)
 
@@ -427,9 +429,15 @@ function DetalheProduto() {
   }, [produto])
 
   const [optionId, setOptionId] = useState('')
+  const [stockChoice, setStockChoice] = useState<(StockChoice & { productId?: string })>()
+  const currentStockChoice = stockChoice?.productId === id ? stockChoice : undefined
   const stockOptions = produto?.opcoesEstoque ?? []
-  const chosenOption = stockOptions.find(option => option.id === optionId) ??
+  const stock = resolveStockSelection(stockOptions, produto?.preco ?? null, currentStockChoice)
+  const chosenOption = stock ? stock.option : (
+    stockOptions.find(option => option.id === optionId) ??
     stockOptions.find(option => option.price === produto?.preco) ?? stockOptions[0]
+  )
+  const chooseStock = (choice: StockChoice) => setStockChoice({ ...choice, productId: id })
   const [imgAtiva, setImgAtiva]       = useState(0)
   const [direction, setDirection]     = useState(0)
   const [selecoes, setSelecoes]       = useState<Record<string, string>>({})
@@ -478,10 +486,16 @@ function DetalheProduto() {
   }, [corAtual, id]) // eslint-disable-line
 
   const variantImages = corAtual ? produto?.imagensPorCor?.[corAtual] : undefined
-  const imagens = (variantImages ?? produto?.imagens ?? []).filter(src => src && !src.includes('via.placeholder.com'))
-  const activeImage = imagens[imgAtiva] ?? imagens[0]
+  const imagens = stock && produto ? resolveStockGallery(produto, stock.color) :
+    (variantImages ?? produto?.imagens ?? []).filter(src => src && !src.includes('via.placeholder.com'))
+  const activeImageIndex = imgAtiva < imagens.length ? imgAtiva : 0
+  const activeImage = imagens[activeImageIndex]
 
-  useEffect(() => { setImgAtiva(0) }, [corAtual])
+  useEffect(() => { setImgAtiva(0) }, [corAtual, stock?.color])
+
+  if (stock && (currentStockChoice?.color !== stock.color || currentStockChoice?.size !== stock.size)) {
+    chooseStock({ color: stock.color, size: stock.size })
+  }
 
   if (!produto && status === 'loading') {
     return <div className="catalog-detail-status" role="status">Carregando produto…</div>
@@ -503,9 +517,9 @@ function DetalheProduto() {
 
   const mudarImagem = (acao: 'next' | 'prev' | number) => {
     setZoomIn(false)
-    if (acao === 'next')      { setDirection(1);  setImgAtiva(p => (p + 1) % imagens.length) }
-    else if (acao === 'prev') { setDirection(-1); setImgAtiva(p => (p - 1 + imagens.length) % imagens.length) }
-    else { setDirection(acao > imgAtiva ? 1 : -1); setImgAtiva(acao) }
+    if (acao === 'next')      { setDirection(1);  setImgAtiva((activeImageIndex + 1) % imagens.length) }
+    else if (acao === 'prev') { setDirection(-1); setImgAtiva((activeImageIndex - 1 + imagens.length) % imagens.length) }
+    else { setDirection(acao > activeImageIndex ? 1 : -1); setImgAtiva(acao) }
   }
 
   const waBase = produto.linkwhatsapp || produto.linkWhatsapp || 'https://wa.me/5511964467000'
@@ -517,10 +531,24 @@ function DetalheProduto() {
   if (lenteSel) variaveisTexto += `, lente ${lenteSel}`
   if (chosenOption) variaveisTexto = ' — ' + chosenOption.label
   const selectedPrice = chosenOption ? chosenOption.price : produto.preco
+  const needsSize = Boolean(stock && !stock.option)
   const consultPrice = selectedPrice === null
+  const purchaseTitle = consultPrice ? 'Consulte o preço pelo WhatsApp' :
+    stock ? 'Compre pelo WhatsApp.' : 'Escolha onde comprar.'
   const intent = consultPrice ? 'Gostaria de consultar o preço de' : 'Tenho interesse no produto:'
   const waLink = `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! ${intent} ${produto.nome}${variaveisTexto}`)}`
-  const mlLink = consultPrice ? undefined : produto.linkMercadoLivre
+  const mlLink = consultPrice || stock ? undefined : produto.linkMercadoLivre
+  const variationGroups = stock
+    ? [
+      { nome: 'Cor', opcoes: stock.colors, selected: stock.color,
+        onSelect: (color: string) => chooseStock({ color, size: stock.size }) },
+      { nome: 'Tamanho', opcoes: stock.sizes, selected: stock.size,
+        onSelect: (size: string) => chooseStock({ color: stock.color, size }) },
+    ]
+    : chosenOption ? [] : variacoesExibidas.map(({ nome, opcoes }) => ({
+      nome, opcoes, selected: selecoes[nome] || opcoes[0],
+      onSelect: (value: string) => setSelecoes(previous => ({ ...previous, [nome]: value })),
+    }))
 
   const slideVariants = {
     enter:  (d: number) => ({ x: d > 0 ? 36 : -36, opacity: 0 }),
@@ -558,12 +586,12 @@ function DetalheProduto() {
               <div className="catalog-thumbnail-list" aria-label="Imagens do produto">
                 {imagens.map((src, i) => (
                   <button
-                    className={`catalog-thumbnail${i === imgAtiva ? ' is-active' : ''}`}
+                    className={`catalog-thumbnail${i === activeImageIndex ? ' is-active' : ''}`}
                     key={i}
                     onMouseEnter={() => mudarImagem(i)}
                     onClick={() => mudarImagem(i)}
                     aria-label={`Ver imagem ${i + 1} de ${imagens.length}`}
-                    aria-pressed={i === imgAtiva}
+                    aria-pressed={i === activeImageIndex}
                   >
                     <img src={src} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center' }} />
                   </button>
@@ -616,7 +644,7 @@ function DetalheProduto() {
                     >
                       <ChevronLeft size={18} aria-hidden="true" />
                     </button>
-                    <span>{imgAtiva + 1} / {imagens.length}</span>
+                    <span>{activeImageIndex + 1} / {imagens.length}</span>
                     <button
                       type="button"
                       aria-label="Próxima imagem"
@@ -654,11 +682,13 @@ function DetalheProduto() {
                 {produto.nome}
               </h1>
 
-              <p className="catalog-detail-price">
-                {formatCatalogPrice(selectedPrice)}
-              </p>
+              {!needsSize && (
+                <p className="catalog-detail-price" aria-live={stock ? 'polite' : undefined}>
+                  {formatCatalogPrice(selectedPrice)}
+                </p>
+              )}
 
-              {chosenOption && (
+              {!stock && chosenOption && (
                 <label className="catalog-stock-option">
                   Variações disponíveis
                   <select value={chosenOption.id} onChange={event => setOptionId(event.target.value)}>
@@ -667,44 +697,44 @@ function DetalheProduto() {
                 </label>
               )}
 
-              {!chosenOption && variacoesExibidas.length > 0 && (
+              {variationGroups.length > 0 && (
                 <div className="catalog-variations">
-                  {variacoesExibidas.map(v => {
-                    const sel = selecoes[v.nome] || v.opcoes[0]
-                    return (
-                      <div className="catalog-variation-group" key={v.nome}>
-                        <p className="catalog-variation-label">
-                          <span>{v.nome}</span>
-                          <strong>{sel}</strong>
-                        </p>
-                        <div className="catalog-variation-options">
-                          {v.opcoes.map((opcao: string) => {
-                            const ativo = sel === opcao
-                            return (
-                              <button
-                                className={`catalog-variation-option${ativo ? ' is-active' : ''}`}
-                                key={opcao}
-                                onClick={() => setSelecoes(p => ({ ...p, [v.nome]: opcao }))}
-                                aria-pressed={ativo}
-                              >
-                                {opcao}
-                              </button>
-                            )
-                          })}
-                        </div>
+                  {variationGroups.map(({ nome, opcoes, selected, onSelect }) => (
+                    <div className="catalog-variation-group" key={nome} role="group" aria-label={nome}>
+                      <p className="catalog-variation-label">
+                        <span>{nome}</span>
+                        {selected && <strong>{selected}</strong>}
+                      </p>
+                      <div className="catalog-variation-options">
+                        {opcoes.map(opcao => {
+                          const ativo = selected === opcao
+                          return (
+                            <button
+                              type="button"
+                              className={`catalog-variation-option${ativo ? ' is-active' : ''}`}
+                              key={opcao}
+                              onClick={() => onSelect(opcao)}
+                              aria-pressed={ativo}
+                            >
+                              {opcao}
+                            </button>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
 
               <section className="catalog-purchase-panel" aria-labelledby="catalog-purchase-title">
                 <div className="catalog-purchase-heading">
-                  <span className="catalog-purchase-kicker">{consultPrice ? 'Atendimento' : 'Comprar agora'}</span>
-                  <h2 id="catalog-purchase-title">{consultPrice ? 'Consulte o preço pelo WhatsApp' : 'Escolha onde comprar.'}</h2>
+                  {!needsSize && <span className="catalog-purchase-kicker">{consultPrice ? 'Atendimento' : 'Comprar agora'}</span>}
+                  <h2 id="catalog-purchase-title" aria-live={stock ? 'polite' : undefined}>
+                    {needsSize ? 'Escolha um tamanho para comprar.' : purchaseTitle}
+                  </h2>
                 </div>
 
-                <div className="catalog-purchase-options">
+                {!needsSize && <div className="catalog-purchase-options">
                   <a
                     href={waLink} target="_blank" rel="noopener noreferrer"
                     className="catalog-purchase-card catalog-purchase-card-whatsapp"
@@ -744,7 +774,7 @@ function DetalheProduto() {
                       </span>
                     </a>
                   )}
-                </div>
+                </div>}
               </section>
             </motion.div>
           </div>

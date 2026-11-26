@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:catalog": "node --test tests/conta-azul-catalog.test.mjs tests/conta-azul-admin.test.mjs",
+    "test:catalog": "node --test tests/conta-azul-catalog.test.mjs tests/conta-azul-admin.test.mjs tests/conta-azul-photos.test.mjs tests/catalog-stock-selection.test.mjs",
     "estoque:previa": "node scripts/estoque-previa.mjs"
   },
   "dependencies": {

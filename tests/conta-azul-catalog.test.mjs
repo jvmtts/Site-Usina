@@ -39,6 +39,61 @@ test('reuses the store photos for the confirmed hull, side, color and single opt
   assert.equal(photos(hakan, [blueLenses, { label: 'Preto' }]), undefined)
 })
 
+test('shows Hydro Citrus once and keeps only available color and size combinations', async () => {
+  const parent = item(80, 'Colete Hydro Citrus Prolife')
+  const iceG1 = item(81, 'Hydro Citrus Ice G1')
+  const duplicate = item(82, 'Colete Salva Vidas Homologado Hydro Citrus G1-Ice')
+  const iceEg2 = item(83, 'Colete Salva Vidas Homologado Hydro Citrus EG2-Ice')
+  const skylineM = item(84, 'Colete Salva Vidas Homologado Hydro Citrus M-Skyline')
+  const skylineP = item(85, 'Colete Salva Vidas Homologado Hydro Citrus P-Skyline')
+  const depleted = item(86, 'Colete Salva Vidas Homologado Hydro Citrus EG1-Sand Blue')
+  const unrelated = item(87, 'Colete Hydro Black Edition')
+  const rows = [parent, iceG1, duplicate, iceEg2, skylineM, skylineP, depleted, unrelated]
+  const details = new Map([
+    [parent.id, detail(parent, 0, 0, { formato: 'VARIACAO', variacao: {
+      produtos: [{ id: iceG1.id, opcoes: [{ descricao: 'G1' }, { descricao: 'ICE' }] }],
+    } })],
+    [iceG1.id, detail(iceG1, 2, 510)],
+    [duplicate.id, detail(duplicate, 3, 520)],
+    [iceEg2.id, detail(iceEg2, 1, 555)],
+    [skylineM.id, detail(skylineM, 1, 600, { imagens: [{ id: 'skyline' }] })],
+    [skylineP.id, detail(skylineP, 0, 0)],
+    [depleted.id, detail(depleted, 0, 0)],
+    [unrelated.id, detail(unrelated, 2, 150)],
+  ])
+  const snapshot = await buildSnapshot({
+    client: clientFor(rows, details), manual: [],
+    imageFor: async photo => '/api/catalogo-imagem/' + photo.id,
+  })
+  assert.equal(snapshot.catalog.length, 2)
+  const colete = snapshot.catalog.find(product => product.nome === 'Colete Hydro Citrus Prolife')
+  assert.deepEqual(colete.opcoesEstoque.map(({ color, size, price }) => [color, size, price]), [
+    ['Ice', 'G1', 510], ['Ice', 'EG2', 555], ['Skyline', 'M', 600],
+  ])
+  assert.deepEqual(colete.imagensPorCor.Skyline, ['/api/catalogo-imagem/skyline'])
+  assert.equal(colete.preco, 510)
+  assert.equal(colete.aliases.length, 4)
+})
+
+test('recognizes ERP color and size attributes on native product variations', async () => {
+  const parent = item(90, 'Camisa')
+  const child = item(91, 'Camisa azul G')
+  const snapshot = await buildSnapshot({ manual: [], client: clientFor([parent, child], new Map([
+    [parent.id, detail(parent, 0, 0, { formato: 'VARIACAO', variacao: {
+      tipos: [
+        { descricao: 'Tamanho', opcoes: [{ id: 'size', descricao: 'G' }] },
+        { descricao: 'Cor', opcoes: [{ id: 'color', descricao: 'Azul' }] },
+      ],
+      produtos: [{ id: child.id, opcoes: [{ id: 'color', descricao: 'Azul' }, { id: 'size', descricao: 'G' }] }],
+    } })],
+    [child.id, detail(child, 1, 92, { imagens: [{ id: 'azul' }] })],
+  ])), imageFor: async photo => '/api/catalogo-imagem/' + photo.id })
+  const product = snapshot.catalog[0]
+  assert.equal(product.opcoesEstoque[0].color, 'Azul')
+  assert.equal(product.opcoesEstoque[0].size, 'G')
+  assert.deepEqual(product.imagensPorCor.Azul, ['/api/catalogo-imagem/azul'])
+})
+
 test('prioritizes available stock, keeps legacy URLs, and imports active retail products', async () => {
   const anchor = item(1, 'Ancora inox')
   const lifejacket = item(2, 'Colete Jet')

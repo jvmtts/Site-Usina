@@ -79,6 +79,8 @@ function integrationScreen(status, redirectUri) {
     (report ? '<p><strong>' + esc(report.published) + '</strong> publicados de ' + esc(report.received) +
       ' cadastros ativos. ' + esc(report.linked) + ' vínculos com o site.</p>' +
       (typeof report.examined === 'number' ? '<p>Produtos principais consultados: ' + esc(report.examined) + '.</p>' : '') +
+      (report.erpPhotos ? '<p>Fotos do Conta Azul: ' + esc(report.erpPhotos.downloaded + report.erpPhotos.reused) +
+        ' utilizadas de ' + esc(report.erpPhotos.candidates) + ' analisadas.</p>' : '') +
       reportList('Preços a preencher', report.withoutPrice) +
       reportList('Produtos em revisão', report.review) + reportList('Produtos sem foto', report.withoutPhoto) +
       reportList('Produtos sem descrição confirmada', report.withoutDescription) +

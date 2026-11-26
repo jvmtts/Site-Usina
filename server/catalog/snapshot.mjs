@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { identifier } from './conta-azul.mjs'
+import { groupHydroCitrus } from './hydro-citrus.mjs'
 import { productContent } from './product-content.mjs'
 
 const sellableType = new Set(['MERCADORIA_PARA_REVENDA', 'PRODUTO_ACABADO'])
@@ -77,6 +78,25 @@ function variantLabel(child, detail) {
   return shortText(options.join(' / ') || detail.nome || child.nome, 130)
 }
 
+function variantAttributes(variation) {
+  const types = Array.isArray(variation?.tipos) ? variation.tipos : []
+  const categories = { cor: 'color', tamanho: 'size' }
+  if (types.length !== 2 || new Set(types.map(type => normalized(type?.descricao))).size !== 2 ||
+      !types.every(type => Object.hasOwn(categories, normalized(type?.descricao)))) return new Map()
+  return new Map(types.flatMap(type => (Array.isArray(type.opcoes) ? type.opcoes : [])
+    .filter(option => typeof option?.id === 'string')
+    .map(option => [option.id, [categories[normalized(type.descricao)], shortText(option.descricao, 60)]])))
+}
+
+function variantDimensions(child, attributes) {
+  if (!attributes.size || !Array.isArray(child.opcoes) || child.opcoes.length !== 2) return {}
+  const mapped = Object.fromEntries(child.opcoes.flatMap(option => {
+    const attribute = attributes.get(option?.id)
+    return attribute?.[1] ? [attribute] : []
+  }))
+  return mapped.color && mapped.size ? mapped : {}
+}
+
 function parseBindings(bindings, manual) {
   if (typeof bindings !== 'object' || !bindings || Array.isArray(bindings)) throw new Error('Vínculos do catálogo inválidos.')
   const existing = new Set(manual.map(product => String(product.id)))
@@ -152,7 +172,7 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
 
   const linkedSource = new Map(Object.entries(bindings).map(([id, uuid]) => [uuid, id]))
   const hiddenIds = []
-  const catalog = []
+  let catalog = []
   for (const product of manual) {
     if (!bindings[product.id]) report.unmatchedLocal.push({ id: product.id, name: product.nome })
     if (!found.has(bindings[product.id])) hiddenIds.push(String(product.id))
@@ -164,6 +184,14 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
   }
 
   const records = details.filter(({ item }) => claimed.has(item.id) || !withheld.has(item.id))
+  const cachedImagesFor = async product => {
+    const cached = []
+    for (const photo of imagesFrom(product).slice(0, 5)) {
+      const path = await imageFor(photo, product)
+      if (path && !cached.includes(path)) cached.push(path)
+    }
+    return cached
+  }
   const imported = await loadInBatches(records, 4, async ({ item, detail, variants }) => {
     const linkedId = linkedSource.get(item.id)
     const local = linkedId ? manual.find(product => String(product.id) === linkedId) : undefined
@@ -182,12 +210,16 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
     }))
     const options = []
     const missingPrices = []
+    const attributes = variantAttributes(detail.variacao)
+    const hydro = /\bhydro citrus\b/.test(normalized(name))
     for (const { child, detail: option } of children) {
       if (!active(option) || child.status === 'INATIVO' || !(stock(option) > 0)) continue
       const label = variantLabel(child, option)
       if (!label) continue
       const price = sellingPrice(option, child.valor_venda)
-      options.push({ id: publicId(child.id), label, price })
+      const dimensions = variantDimensions(child, attributes)
+      const images = dimensions.color || hydro ? await cachedImagesFor(option) : []
+      options.push({ id: publicId(child.id), label, price, ...dimensions, ...(images.length && { images }) })
       if (price === null) missingPrices.push({
         id: child.id, name: name + ' · ' + label,
         sku: shortText(option.codigo_sku ?? child.codigo_sku ?? child.codigo ?? itemsById.get(child.id)?.codigo),
@@ -209,16 +241,17 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
     const supplemental = productContent(id, normalized(detail.nome || item.nome), legacyById, normalized, options)
     const localImages = (local?.imagens ?? supplemental.images ?? [])
       .filter(src => typeof src === 'string' && !src.includes('via.placeholder.com'))
-    let images = localImages
-    if (!images.length && !Object.keys(local?.imagensPorCor ?? {}).length) {
-      const candidates = imagesFrom(detail).slice(0, 3)
-      const cached = []
-      for (const photo of candidates) {
-        const path = await imageFor(photo)
-        if (path && !cached.includes(path)) cached.push(path)
+    const erpImages = await cachedImagesFor(detail)
+    const images = erpImages.length ? erpImages : localImages
+    const erpByColor = new Map()
+    for (const option of options) {
+      if (option.color && option.images?.length && !erpByColor.has(option.color)) {
+        erpByColor.set(option.color, option.images)
       }
-      images = cached
-      if (!images.length) report.withoutPhoto.push({ id: item.id, name, sku })
+    }
+    const imagesByColor = { ...local?.imagensPorCor, ...Object.fromEntries(erpByColor) }
+    if (!images.length && !Object.keys(imagesByColor).length && !options.some(option => option.images?.length)) {
+      report.withoutPhoto.push({ id: item.id, name, sku })
     }
     const category = shortText(detail.categoria?.descricao) || 'Equipamentos'
     const resolvedCategory = ['outras', 'equipamentos'].includes(normalized(category)) ? supplemental.category || category : category
@@ -231,12 +264,13 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
         ...(local && {
           variacoes: local.variacoes,
           tamanhosPorCor: local.tamanhosPorCor, lentesPorCor: local.lentesPorCor,
-          imagensPorCor: local.imagensPorCor, linkwhatsapp: local.linkwhatsapp,
+          linkwhatsapp: local.linkwhatsapp,
           linkWhatsapp: local.linkWhatsapp, linkMercadoLivre: local.linkMercadoLivre,
         }),
         id, nome: name,
         categoria: local?.categoria ?? preferredCatalogCategory.get(normalized(resolvedCategory)) ?? resolvedCategory,
         preco: price, descricao: description || undefined, imagens: images, disponivel: true,
+        imagensPorCor: Object.keys(imagesByColor).length ? imagesByColor : undefined,
         fichaTecnica: Object.keys(specs).length ? specs : undefined,
         opcoesEstoque: options.length ? options : undefined,
       },
@@ -247,11 +281,12 @@ export async function buildSnapshot({ client, manual, previousBindings = {}, con
     if (record.product) catalog.push(record.product)
     else hiddenIds.push(String(record.hidden))
   }
+  catalog = groupHydroCitrus(catalog, legacyById, normalized)
   const manualOrder = new Map(manual.map((product, order) => [product.id, order]))
   catalog.sort((left, right) =>
     (manualOrder.get(left.id) ?? Infinity) - (manualOrder.get(right.id) ?? Infinity) ||
     left.nome.localeCompare(right.nome, 'pt-BR'))
-  report.published = imported.filter(record => record.product).length
+  report.published = catalog.length
   report.linked = Object.keys(bindings).length
   report.review.sort((a,b) => a.name.localeCompare(b.name,'pt-BR'))
   report.withoutPrice.sort((a,b) => a.name.localeCompare(b.name,'pt-BR'))
