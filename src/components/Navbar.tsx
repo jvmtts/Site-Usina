@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowUpRight, Menu, X } from 'lucide-react'
 import { upcomingExpedition } from '../config/upcomingExpedition'
+import HeaderActions from '../shop/HeaderActions'
 
 const links = [
   { label: 'Início', path: '/' },
@@ -25,7 +26,7 @@ function NavCta({ transparent = false, compact = false, mobile = false }: NavCta
       href={upcomingExpedition.whatsapp}
       target="_blank"
       rel="noopener noreferrer"
-      className={mobile ? undefined : 'hidden md:inline-flex'}
+      className={mobile ? undefined : 'hidden lg:inline-flex'}
       aria-label="Garantir vaga na Expedição Serra Negra pelo WhatsApp"
       onMouseEnter={() => setActive(true)}
       onMouseLeave={() => setActive(false)}
@@ -194,6 +195,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
         }}
         transition={{ duration: 0.68, ease: [0.16, 1, 0.3, 1] }}
         aria-hidden={!revealed}
+        inert={!revealed}
         style={{
           position: 'fixed',
           top: 0,
@@ -237,8 +239,8 @@ export default function Navbar({ revealed = true }: NavbarProps) {
           </Link>
 
           <ul
-            className="hidden md:flex"
-            style={{ alignItems: 'center', gap: '2.5rem', listStyle: 'none' }}
+            className="hidden lg:flex"
+            style={{ alignItems: 'center', gap: 'clamp(1.15rem, 2.4vw, 2.5rem)', listStyle: 'none' }}
           >
             {links.map((link) => {
               const active = isLinkActive(link.path)
@@ -298,17 +300,21 @@ export default function Navbar({ revealed = true }: NavbarProps) {
             })}
           </ul>
 
-          <NavCta transparent={transparent} compact={scrolled} />
+          <div className="flex shrink-0 items-center gap-2">
+            <NavCta transparent={transparent} compact={scrolled} />
+            <HeaderActions transparent={transparent} />
 
           <button
             type="button"
-            className="md:hidden"
+            className="lg:hidden"
             aria-label={open ? 'Fechar menu' : 'Abrir menu'}
             aria-expanded={open}
             aria-controls="mobile-navigation"
             onClick={() => setOpen((current) => !current)}
             style={{
               padding: '0.4rem',
+              minWidth: '44px',
+              minHeight: '44px',
               border: 'none',
               background: 'none',
               color: transparent ? '#fff' : '#0A0A0A',
@@ -317,6 +323,7 @@ export default function Navbar({ revealed = true }: NavbarProps) {
           >
             {open ? <X size={22} /> : <Menu size={22} />}
           </button>
+          </div>
         </div>
       </motion.header>
 

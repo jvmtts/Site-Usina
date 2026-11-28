@@ -12,6 +12,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import { CatalogProvider } from './catalog/CatalogProvider'
+import { ShopProvider } from './shop/ShopProvider'
 import RouteSweep, { ROUTE_SWEEP_LOGO } from './components/RouteSweep'
 import Home from './pages/Home'
 import { EXPEDITION_PATH, MONTE_VERDE_ARCHIVE, MONTE_VERDE_PATH, REGISTRATION_PATH } from './config/routes'
@@ -27,6 +28,8 @@ const pageImports = {
 const Expeditions = lazy(pageImports['/expedicoes'])
 const Catalog = lazy(pageImports['/catalogo'])
 const Contact = lazy(pageImports['/contato'])
+const AccountPage = lazy(() => import('./shop/AccountPage'))
+const CartPage = lazy(() => import('./shop/CartPage'))
 const UpcomingExpedition = lazy(pageImports[EXPEDITION_PATH])
 const MAIN_ROUTES = new Set(['/', '/expedicoes', '/catalogo', '/contato', EXPEDITION_PATH])
 
@@ -38,7 +41,7 @@ function routeSection(pathname: string) {
 const CATALOG_SCROLL_KEY = 'catalogScrollY'
 const CATALOG_RESTORE_KEY = 'catalogRestorePending'
 
-function ScrollToTop({ pathname, hash }: Location) {
+function ScrollToTop({ pathname, hash }: Pick<Location, 'pathname' | 'hash'>) {
   useLayoutEffect(() => {
     const shouldRestoreCatalog =
       pathname === '/catalogo' &&
@@ -51,7 +54,7 @@ function ScrollToTop({ pathname, hash }: Location) {
       sessionStorage.removeItem(CATALOG_RESTORE_KEY)
     }
 
-    if (hash) {
+    if (hash && pathname !== '/conta/confirmar') {
       const targetId = decodeURIComponent(hash.slice(1))
       let observer: MutationObserver | null = null
       let frameId = 0
@@ -166,6 +169,8 @@ function AnimatedRoutes({
           <Route path="/expedicoes/campos-do-jordao-2026" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
           <Route path="/expedicoes/campos-do-jordao-2026/inscricao" element={<Navigate to="/expedicoes#campos-do-jordao-2026" replace />} />
           <Route path="/catalogo/*" element={<Catalog />} />
+          <Route path="/conta/*" element={<AccountPage />} />
+          <Route path="/carrinho" element={<CartPage />} />
           <Route path="/contato" element={<Contact />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -258,7 +263,7 @@ function AppShell() {
   return (
     <div className="site-shell">
       <a className="skip-link" href="#main-content">Pular para o conteúdo</a>
-      <ScrollToTop {...displayedLocation} />
+      <ScrollToTop pathname={displayedLocation.pathname} hash={displayedLocation.hash} />
       <Navbar revealed={homeContentVisible} />
       {transitioning && (
         <RouteSweep
@@ -286,7 +291,9 @@ export default function App() {
   return (
     <Router>
       <CatalogProvider>
-        <AppShell />
+        <ShopProvider>
+          <AppShell />
+        </ShopProvider>
       </CatalogProvider>
     </Router>
   )

@@ -6,6 +6,8 @@ import type { Produto } from '@/data/produtos'
 import { useCatalog } from '@/catalog/catalogContext'
 import { formatCatalogPrice } from '@/catalog/formatCatalogPrice'
 import { resolveStockGallery, resolveStockSelection, type StockChoice } from '@/catalog/stockSelection'
+import { catalogPriceCents } from '@/shop/cart'
+import ProductShopActions from '@/shop/ProductShopActions'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import './Catalog.css'
 
@@ -732,6 +734,13 @@ function DetalheProduto() {
                   ))}
                 </div>
               )}
+
+              <ProductShopActions
+                key={String(produto.id) + '/' + (chosenOption?.id ?? '')}
+                product={produto}
+                optionId={chosenOption?.id ?? null}
+                canAdd={status === 'ready' && !needsSize && catalogPriceCents(selectedPrice) !== null}
+              />
 
               <section className="catalog-purchase-panel" aria-labelledby="catalog-purchase-title">
                 <div className="catalog-purchase-heading">
