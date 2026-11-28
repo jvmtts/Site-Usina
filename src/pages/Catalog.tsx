@@ -1,8 +1,14 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, X, ArrowUp, Search, ZoomIn } from 'lucide-react'
-import { produtos, type Produto } from '@/data/produtos'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react'
+import { flushSync } from 'react-dom'
+import { Link, Routes, Route, useNavigate, useParams } from 'react-router-dom'
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, ImageOff, Search, X, ZoomIn } from 'lucide-react'
+import type { Produto } from '@/data/produtos'
+import { useCatalog } from '@/catalog/catalogContext'
+import { formatCatalogPrice } from '@/catalog/formatCatalogPrice'
+import { resolveStockGallery, resolveStockSelection, type StockChoice } from '@/catalog/stockSelection'
+import { catalogPriceCents } from '@/shop/cart'
+import ProductShopActions from '@/shop/ProductShopActions'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import './Catalog.css'
 
 const CATALOG_BATCH_SIZE = 8
@@ -10,6 +16,8 @@ const CATALOG_SCROLL_KEY = 'catalogScrollY'
 const CATALOG_RESTORE_KEY = 'catalogRestorePending'
 
 const getInitialCatalogLimit = () => {
+  if (sessionStorage.getItem(CATALOG_RESTORE_KEY) !== 'true') return CATALOG_BATCH_SIZE
+
   const storedLimit = Number.parseInt(sessionStorage.getItem('catalogLimite') || '', 10)
   if (!Number.isFinite(storedLimit)) return CATALOG_BATCH_SIZE
 
@@ -32,191 +40,110 @@ const WhatsappIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
   </svg>
 )
 
-/* ─── Scroll to top ──────────────────────────────────────────────── */
+const catalogEase = [0.16, 1, 0.3, 1] as const
+
+function normalizeSearch(value: string) {
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('pt-BR').trim()
+}
+
 function ScrollToTopButton() {
   const [visible, setVisible] = useState(false)
+  const reduceMotion = useReducedMotion()
+
   useEffect(() => {
-    const fn = () => setVisible(window.scrollY > 400)
-    window.addEventListener('scroll', fn, { passive: true })
-    return () => window.removeEventListener('scroll', fn)
+    const update = () => setVisible(window.scrollY > 400)
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => window.removeEventListener('scroll', update)
   }, [])
+
   return (
     <button
+      type="button"
       className="catalog-scroll-top"
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      style={{
-        position: 'fixed', bottom: '2rem', right: '2rem', zIndex: 50,
-        width: '3rem', height: '3rem',
-        background: '#FF7B00', color: '#fff',
-        border: 'none', cursor: 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transition: 'opacity 0.3s, transform 0.3s',
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(1rem)',
-        pointerEvents: visible ? 'auto' : 'none',
-        boxShadow: '0 4px 20px rgba(255,123,0,0.4)',
-      }}
+      data-visible={visible}
+      tabIndex={visible ? 0 : -1}
+      aria-hidden={!visible}
+      onClick={() => window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' })}
       aria-label="Voltar ao topo"
     >
-      <ArrowUp size={18} />
+      <ArrowUp size={18} aria-hidden="true" />
     </button>
   )
 }
 
-/* ─── Card Produto ───────────────────────────────────────────────── */
-function CardProduto({ produto }: { produto: Produto }) {
-  const navigate                      = useNavigate()
-  const [imgIdx, setImgIdx]           = useState(0)
-  const [hovered, setHovered]         = useState(false)
+function CardProduto({ produto, priority }: { produto: Produto; priority: boolean }) {
+  const [primaryFailed, setPrimaryFailed] = useState(false)
+  const [showAlternative, setShowAlternative] = useState(false)
+  const [alternativeReady, setAlternativeReady] = useState(false)
+  const category = Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria
+  const images = (produto.imagens.length ? produto.imagens : Object.values(produto.imagensPorCor ?? {})[0] ?? [])
+    .filter(src => src && !src.includes('via.placeholder.com'))
+  const [primary, alternative] = images
+  const price = formatCatalogPrice(produto.preco)
 
-  const imagens = useMemo(() => {
-    if (produto.imagensPorCor && Object.keys(produto.imagensPorCor).length > 0)
-      return Object.values(produto.imagensPorCor).map((f) => (f as string[])[0])
-    if (produto.imagens?.length) return produto.imagens
-    return ['https://via.placeholder.com/600x600?text=Sem+Foto']
-  }, [produto])
-
-  useEffect(() => {
-    if (!hovered || imagens.length <= 1) return
-    const id = setInterval(() => setImgIdx(p => (p + 1) % imagens.length), 1500)
-    return () => clearInterval(id)
-  }, [hovered, imagens.length])
-
-  const categoria = Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria
-
-  const handleClick = () => {
+  const rememberScroll = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.button !== 0 || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return
     sessionStorage.setItem(CATALOG_SCROLL_KEY, window.scrollY.toString())
     sessionStorage.setItem(CATALOG_RESTORE_KEY, 'true')
-    navigate(`/catalogo/produto/${produto.id}`)
   }
 
   return (
-    <div
+    <Link
       className="catalog-product-card"
-      onClick={handleClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => { setHovered(false); setImgIdx(0) }}
-      onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          handleClick()
-        }
+      to={'/catalogo/produto/' + produto.id}
+      onClick={rememberScroll}
+      onPointerEnter={event => {
+        if (event.pointerType === 'mouse' && alternative) setShowAlternative(true)
       }}
-      role="link"
-      tabIndex={0}
-      aria-label={`Ver detalhes de ${produto.nome}`}
-      style={{
-        background: '#fff',
-        border: '1px solid #EBEBEB',
-        cursor: 'pointer',
-        display: 'flex', flexDirection: 'column',
-      }}
+      aria-labelledby={'catalog-product-title-' + produto.id + ' catalog-product-price-' + produto.id}
     >
-      {/* Imagem */}
-      <div className="catalog-product-media" style={{ position: 'relative', aspectRatio: '1/1', overflow: 'hidden', background: '#F7F7F5' }}>
-        {imagens.map((src, i) => (
-          <img
-            className="catalog-product-image"
-            key={i}
-            src={src}
-            alt={produto.nome}
-            loading="lazy"
-            decoding="async"
-            style={{
-              position: 'absolute', inset: 0,
-              width: '100%', height: '100%', objectFit: 'contain',
-              objectPosition: 'center',
-              padding: 0,
-              transition: 'opacity 0.6s ease',
-              opacity: i === imgIdx ? 1 : 0,
-              zIndex: i === imgIdx ? 1 : 0,
-            }}
-          />
-        ))}
-
-        {/* Dots */}
-        {imagens.length > 1 && (
-          <div style={{
-            position: 'absolute', bottom: '0.75rem', left: '50%',
-            transform: `translateX(-50%) translateY(${hovered ? '0' : '0.5rem'})`,
-            display: 'flex', gap: '5px',
-            background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)',
-            padding: '5px 10px',
-            opacity: hovered ? 1 : 0,
-            transition: 'opacity 0.3s, transform 0.3s',
-            zIndex: 2,
-          }}>
-            {imagens.map((_, i) => (
-              <div key={i} style={{
-                height: '4px', borderRadius: '2px',
-                background: i === imgIdx ? '#FF7B00' : '#DEDEDE',
-                width: i === imgIdx ? '1.5rem' : '0.4rem',
-                transition: 'all 0.35s',
-              }} />
-            ))}
-          </div>
+      <div className="catalog-product-media">
+        {primary && !primaryFailed ? (
+          <img className="catalog-product-image" src={primary} alt=""
+            loading={priority ? 'eager' : 'lazy'} decoding="async"
+            onError={() => setPrimaryFailed(true)} />
+        ) : (
+          <span className="catalog-product-placeholder">
+            <ImageOff size={23} strokeWidth={1.4} aria-hidden="true" />
+            Foto indisponível
+          </span>
         )}
-
-        {/* Badge categoria */}
-        <div className="catalog-category-badge" style={{
-          position: 'absolute', top: '0.75rem', left: '0.75rem',
-          background: '#fff', padding: '0.3rem 0.75rem',
-          border: '1px solid #EBEBEB', zIndex: 2,
-        }}>
-          <span className="mono" style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#777' }}>
-            {categoria}
+        {primary && !primaryFailed && alternative && showAlternative && (
+          <img className="catalog-product-image catalog-product-image--alternative"
+            data-ready={alternativeReady} src={alternative} alt="" decoding="async"
+            onLoad={() => setAlternativeReady(true)} onError={() => setAlternativeReady(false)} />
+        )}
+        <span className="catalog-product-category">{category}</span>
+      </div>
+      <div className="catalog-product-info">
+        <h3 id={'catalog-product-title-' + produto.id}>{produto.nome}</h3>
+        <div className="catalog-product-footer">
+          <p id={'catalog-product-price-' + produto.id} className="catalog-product-price">{price}</p>
+          <span className="catalog-card-cta" aria-hidden="true">
+            <span>Ver detalhes</span>
+            <span className="catalog-card-cta-arrow"><ArrowUpRight size={17} strokeWidth={1.8} /></span>
           </span>
         </div>
       </div>
-
-      {/* Info */}
-      <div className="catalog-product-info" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flexGrow: 1 }}>
-        <h3 style={{
-          fontFamily: "'Montserrat', sans-serif", fontWeight: 700,
-          fontSize: '0.95rem', color: '#0A0A0A', lineHeight: 1.35,
-          display: '-webkit-box', WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>
-          {produto.nome}
-        </h3>
-        <p className="display" style={{ fontSize: '1.5rem', color: '#0A0A0A', marginTop: 'auto', paddingTop: '0.5rem' }}>
-          {typeof produto.preco === 'number'
-            ? produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-            : produto.preco}
-        </p>
-      </div>
-
-      {/* CTA */}
-      <div style={{ padding: '0 1.5rem 1.5rem' }}>
-        <div className="catalog-card-cta" style={{
-          width: '100%', padding: '0.75rem',
-          border: '1.5px solid',
-          borderColor: hovered ? '#FF7B00' : '#EBEBEB',
-          color: hovered ? '#FF7B00' : '#0A0A0A',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'border-color 0.2s, color 0.2s',
-        }}>
-          <span className="mono" style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            Ver detalhes
-          </span>
-        </div>
-      </div>
-    </div>
+    </Link>
   )
 }
 
-/* ─── Vitrine ────────────────────────────────────────────────────── */
 function Vitrine() {
-  const [busca, setBusca]             = useState(() => sessionStorage.getItem('catalogBusca') || '')
-  const [categoria, setCategoria]     = useState(() => sessionStorage.getItem('catalogCategoria') || 'Todos')
-  const [lupaAberta, setLupaAberta]   = useState(() => sessionStorage.getItem('catalogLupa') === 'true')
-  const [limite, setLimite]           = useState(getInitialCatalogLimit)
-  const [loadingMais, setLoadingMais] = useState(false)
-  const inputRef                      = useRef<HTMLInputElement>(null)
+  const { products } = useCatalog()
+  const [busca, setBusca] = useState(() => sessionStorage.getItem('catalogBusca') || '')
+  const [categoria, setCategoria] = useState(() => sessionStorage.getItem('catalogCategoria') || 'Todos')
+  const [limite, setLimite] = useState(getInitialCatalogLimit)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [searchActive, setSearchActive] = useState(() => Boolean(busca))
+  const inputRef = useRef<HTMLInputElement>(null)
+  const searchToggleRef = useRef<HTMLButtonElement>(null)
+  const catalogEnd = useRef<HTMLDivElement>(null)
+  const reduceMotion = useReducedMotion()
 
   useEffect(() => { sessionStorage.setItem('catalogBusca', busca) }, [busca])
   useEffect(() => { sessionStorage.setItem('catalogCategoria', categoria) }, [categoria])
-  useEffect(() => { sessionStorage.setItem('catalogLupa', lupaAberta.toString()) }, [lupaAberta])
   useEffect(() => { sessionStorage.setItem('catalogLimite', limite.toString()) }, [limite])
 
   useEffect(() => {
@@ -226,7 +153,7 @@ function Vitrine() {
     if (!shouldRestore || !Number.isFinite(savedScrollY)) {
       sessionStorage.removeItem(CATALOG_SCROLL_KEY)
       sessionStorage.removeItem(CATALOG_RESTORE_KEY)
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
       return
     }
 
@@ -240,7 +167,7 @@ function Vitrine() {
 
       const maximumScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight)
       const targetScroll = Math.min(savedScrollY, maximumScroll)
-      window.scrollTo({ top: targetScroll, left: 0, behavior: 'auto' })
+      window.scrollTo({ top: targetScroll, left: 0, behavior: 'instant' })
       attempts += 1
 
       const pageCanReachSavedPosition = maximumScroll >= savedScrollY - 2
@@ -267,217 +194,200 @@ function Vitrine() {
   }, [])
 
   const categorias = useMemo(() => {
-    const set = new Set<string>()
-    produtos.forEach((p) => {
-      if (p.disponivel === false) return
-      const cats = Array.isArray(p.categoria) ? p.categoria : [p.categoria]
-      cats.forEach((c: string) => set.add(c))
+    const options = products.filter(product => product.disponivel !== false).flatMap(product => product.categoria)
+    return ['Todos', ...new Set(options)]
+  }, [products])
+  const activeCategory = categorias.includes(categoria) ? categoria : 'Todos'
+  const filtrados = useMemo(() => {
+    const terms = normalizeSearch(busca).split(/\s+/).filter(Boolean)
+    return products.filter(product => {
+      if (product.disponivel === false) return false
+      const categories = [product.categoria].flat()
+      const variations = product.opcoesEstoque?.map(option => option.label) ?? []
+      const searchable = normalizeSearch([product.nome, product.fichaTecnica?.Marca, ...categories, ...variations].join(' '))
+      return (activeCategory === 'Todos' || categories.includes(activeCategory)) &&
+        terms.every(term => searchable.includes(term))
     })
-    return ['Todos', ...Array.from(set)]
-  }, [])
-
-  const filtrados = useMemo(() =>
-    produtos.filter((p) => {
-      if (p.disponivel === false) return false
-      const cats = Array.isArray(p.categoria) ? p.categoria : [p.categoria]
-      return (
-        p.nome.toLowerCase().includes(busca.toLowerCase()) &&
-        (categoria === 'Todos' || cats.includes(categoria))
-      )
-    }), [busca, categoria])
-
-  const exibidos = filtrados.slice(0, limite)
+  }, [activeCategory, busca, products])
+  const mostrar = filtrados.slice(0, limite)
+  const hasMore = limite < filtrados.length
 
   useEffect(() => {
-    const fn = () => {
-      if (
-        window.innerHeight + document.documentElement.scrollTop + 300
-        >= document.documentElement.scrollHeight &&
-        !loadingMais && limite < filtrados.length
-      ) {
-        setLoadingMais(true)
-        setTimeout(() => { setLimite(p => p + CATALOG_BATCH_SIZE); setLoadingMais(false) }, 500)
-      }
-    }
-    window.addEventListener('scroll', fn, { passive: true })
-    return () => window.removeEventListener('scroll', fn)
-  }, [loadingMais, limite, filtrados.length])
+    setLoadingMore(false)
+    const end = catalogEnd.current
+    if (!end || !hasMore) return
 
-  const handleCategoria = (cat: string) => {
-    setCategoria(cat)
+    if (typeof IntersectionObserver === 'undefined') {
+      setLimite(filtrados.length)
+      return
+    }
+
+    let loadTimer: number | undefined
+    const observer = new IntersectionObserver(entries => {
+      if (loadTimer !== undefined || !entries.some(entry => entry.isIntersecting)) return
+      observer.disconnect()
+      setLoadingMore(true)
+      loadTimer = window.setTimeout(() => {
+        setLimite(current => Math.min(current + CATALOG_BATCH_SIZE, filtrados.length))
+        setLoadingMore(false)
+      }, 500)
+    }, { rootMargin: '0px 0px -64px' })
+
+    observer.observe(end)
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(loadTimer)
+    }
+  }, [activeCategory, busca, filtrados.length, hasMore, limite])
+
+  const changeSearch = (value: string) => {
+    setBusca(value)
     setLimite(CATALOG_BATCH_SIZE)
   }
 
-  const toggleLupa = () => {
-    if (lupaAberta) {
-      setLupaAberta(false)
-      setBusca('')
-    } else {
-      setLupaAberta(true)
-      setTimeout(() => inputRef.current?.focus(), 80)
-    }
+  const openSearch = () => {
+    flushSync(() => setSearchActive(true))
+    inputRef.current?.focus({ preventScroll: true })
+  }
+
+  const closeSearch = () => {
+    changeSearch('')
+    setSearchActive(false)
+    searchToggleRef.current?.focus({ preventScroll: true })
   }
 
   return (
-    <main style={{ background: '#fff', minHeight: '100vh' }}>
+    <div className="catalog-list-page">
+      <div className="wrap">
+        <section className="catalog-hero" aria-labelledby="catalog-title">
+          <div className="catalog-hero-media" aria-hidden="true">
+            <img src="/images/Capitolio/FOTO%202.webp" alt="" fetchPriority="high" decoding="async" />
+          </div>
+          <motion.div
+            className="catalog-hero-content"
+            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.38, ease: catalogEase }}
+          >
+            <h1 id="catalog-title">Equipamentos<br />para jet ski</h1>
+            <p>Âncoras, coletes e acessórios para sua próxima saída.</p>
+            <a className="catalog-hero-link" href="#catalogo-produtos">
+              Explorar produtos <ArrowDown size={15} aria-hidden="true" />
+            </a>
+          </motion.div>
+        </section>
+      </div>
 
-      {/* Header escuro */}
-      <section style={{
-        background: '#0A0A0A',
-        paddingTop: 'clamp(8rem,14vh,11rem)',
-        paddingBottom: 'clamp(3rem,6vh,5rem)',
-        position: 'relative', overflow: 'hidden',
-      }}>
-        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-          <span className="display" style={{ fontSize: 'clamp(6rem,16vw,14rem)', color: 'rgba(255,255,255,0.025)', letterSpacing: '-0.04em', whiteSpace: 'nowrap' }}>
-            CATÁLOGO
-          </span>
-        </div>
-        <div className="wrap" style={{ position: 'relative', zIndex: 1 }}>
-          <motion.span className="eyebrow"
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            style={{ marginBottom: '1rem' }}>
-            Equipamentos de alta performance
-          </motion.span>
-          <motion.h1 className="display"
-            initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            style={{ fontSize: 'clamp(3.5rem, 9vw, 7.5rem)', color: '#fff', lineHeight: 0.9 }}>
-            CATÁLOGO
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem', maxWidth: '420px', marginTop: '1.5rem', lineHeight: 1.75 }}>
-            Âncoras, coletes, roupas e acessórios para sua aventura náutica.
-          </motion.p>
-        </div>
-      </section>
-
-      {/* Filtros + Lupa */}
-      <section className="catalog-toolbar" style={{ borderBottom: '1px solid #EBEBEB', background: '#F7F7F5' }}>
-        <div className="wrap" style={{ paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-
-            {/* Categorias */}
-            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              {categorias.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => handleCategoria(cat)}
-                  className={`mono catalog-filter-chip${categoria === cat ? ' is-active' : ''}`}
-                  style={{
-                    padding: '0.55rem 1.25rem',
-                    fontSize: '0.65rem', fontWeight: 700,
-                    letterSpacing: '0.15em', textTransform: 'uppercase',
-                    cursor: 'pointer', transition: 'all 0.2s',
-                    background: categoria === cat ? '#0A0A0A' : 'transparent',
-                    color:      categoria === cat ? '#fff' : '#777',
-                    border:     categoria === cat ? '1.5px solid #0A0A0A' : '1.5px solid #DEDEDE',
-                  }}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            {/* Lupa expansível */}
-            <div className={`catalog-search${lupaAberta ? ' is-open' : ''}`} style={{
-              display: 'flex', alignItems: 'center',
-              background: lupaAberta ? '#fff' : 'transparent',
-              border: lupaAberta ? '1.5px solid #FF7B00' : '1.5px solid #DEDEDE',
-              transition: 'all 0.35s ease',
-              height: '2.75rem',
-              width: lupaAberta ? 'clamp(200px, 28vw, 320px)' : '2.75rem',
-              overflow: 'hidden',
-            }}>
-              <button
-                onClick={toggleLupa}
-                style={{
-                  width: '2.75rem', height: '2.75rem', flexShrink: 0,
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: lupaAberta ? '#FF7B00' : '#777',
-                  transition: 'color 0.2s',
-                }}
-              >
-                {lupaAberta ? <X size={16} /> : <Search size={16} />}
-              </button>
+      <section id="catalogo-produtos" className="wrap catalog-results" aria-labelledby="catalog-results-title" tabIndex={-1}>
+        <div className="catalog-toolbar">
+          <div
+            className="catalog-search"
+            role="search"
+            data-active={searchActive}
+            onKeyDown={event => {
+              if (event.key === 'Escape' && searchActive) {
+                event.preventDefault()
+                closeSearch()
+              }
+            }}
+          >
+            <button
+              ref={searchToggleRef}
+              type="button"
+              className="catalog-search-toggle"
+              aria-label={searchActive ? 'Limpar e fechar busca' : 'Abrir busca'}
+              aria-controls="catalog-search-fields"
+              aria-expanded={searchActive}
+              onClick={searchActive ? closeSearch : openSearch}
+            >
+              <Search className="catalog-search-lens" size={19} strokeWidth={1.75} aria-hidden="true" />
+              <X className="catalog-search-cross" size={21} strokeWidth={1.75} aria-hidden="true" />
+            </button>
+            <div id="catalog-search-fields" className="catalog-search-fields" inert={!searchActive}>
+              <label htmlFor="catalog-search-input" className="sr-only">Buscar produtos</label>
               <input
                 ref={inputRef}
-                type="text"
-                placeholder="Buscar produto..."
+                id="catalog-search-input"
+                type="search"
                 value={busca}
-                onChange={e => { setBusca(e.target.value); setLimite(CATALOG_BATCH_SIZE) }}
-                tabIndex={lupaAberta ? 0 : -1}
-                style={{
-                  border: 'none', outline: 'none', background: 'transparent',
-                  width: '100%', paddingRight: '0.75rem',
-                  fontFamily: "'Inter', sans-serif", fontSize: '0.85rem',
-                  color: '#0A0A0A', opacity: lupaAberta ? 1 : 0,
-                  transition: 'opacity 0.25s',
-                }}
-                onBlur={e => {
-                  if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node) && busca === '')
-                    setLupaAberta(false)
-                }}
+                onChange={event => changeSearch(event.target.value)}
+                placeholder="Buscar por nome ou marca"
+                autoComplete="off"
               />
+              {busca && (
+                <button
+                  type="button"
+                  className="catalog-search-clear"
+                  onClick={() => { changeSearch(''); inputRef.current?.focus() }}
+                  aria-label="Limpar busca"
+                >
+                  Limpar
+                </button>
+              )}
             </div>
           </div>
-
-          {/* Contador */}
-          <p className="mono" style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#BBBBBB', marginTop: '0.75rem' }}>
-            {filtrados.length} produto{filtrados.length !== 1 ? 's' : ''} encontrado{filtrados.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </section>
-
-      {/* Grid */}
-      <section className="wrap" style={{ paddingTop: 'clamp(3rem,6vh,5rem)', paddingBottom: 'clamp(6rem,10vh,8rem)' }}>
-        {exibidos.length === 0 ? (
-          <div className="catalog-empty" style={{ textAlign: 'center', padding: '5rem 2rem', border: '1px dashed #EBEBEB' }}>
-            <p className="display" style={{ fontSize: '2rem', color: '#DEDEDE', marginBottom: '1rem' }}>NENHUM RESULTADO</p>
-            <p style={{ color: '#999', fontSize: '0.95rem' }}>Tente outro filtro ou limpe a busca.</p>
+          <div className="catalog-filters" role="group" aria-label="Filtrar por categoria">
+            {categorias.map(category => (
+              <button type="button" key={category} className="catalog-filter-chip"
+                aria-pressed={activeCategory === category}
+                onClick={() => { setCategoria(category); setLimite(CATALOG_BATCH_SIZE) }}
+              >
+                {activeCategory === category && (
+                  <motion.span className="catalog-filter-indicator"
+                    layoutId={reduceMotion ? undefined : 'catalog-filter-indicator'}
+                    transition={{ duration: reduceMotion ? 0 : 0.24, ease: catalogEase }}
+                    aria-hidden="true" />
+                )}
+                <span>{category}</span>
+              </button>
+            ))}
           </div>
-        ) : (
-          <motion.div
-            layout
-            className="catalog-grid"
-          >
-            <AnimatePresence>
-              {exibidos.map((p, index) => (
-                <motion.div
-                  layout
-                  key={p.id}
-                  initial={{ opacity: 0, y: 18, scale: 0.985 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8 }}
-                  transition={{ duration: 0.45, delay: Math.min(index % 9, 8) * 0.035, ease: [0.16, 1, 0.3, 1] }}
+        </div>
+
+        <div className="catalog-results-header">
+          <h2 id="catalog-results-title">{activeCategory === 'Todos' ? 'Todos os produtos' : activeCategory}</h2>
+          <span role="status">{filtrados.length} {filtrados.length === 1 ? 'produto' : 'produtos'}</span>
+        </div>
+
+        {mostrar.length ? (
+          <div className="catalog-grid">
+            <AnimatePresence initial={false} mode="popLayout">
+              {mostrar.map((product, index) => (
+                <motion.article key={product.id} layout={reduceMotion ? false : 'position'}
+                  initial={reduceMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={reduceMotion ? undefined : { opacity: 0 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.22, ease: catalogEase }}
                 >
-                  <CardProduto produto={p} />
-                </motion.div>
+                  <CardProduto produto={product} priority={index < 3} />
+                </motion.article>
               ))}
             </AnimatePresence>
-          </motion.div>
+          </div>
+        ) : (
+          <div className="catalog-empty">
+            <h3>Nenhum produto encontrado</h3>
+            <p>Experimente outro termo ou veja todas as categorias.</p>
+            <button type="button" onClick={() => { changeSearch(''); setCategoria('Todos'); openSearch() }}>
+              Limpar filtros
+            </button>
+          </div>
         )}
 
-        {loadingMais && (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
-            <div style={{
-              width: '2rem', height: '2rem',
-              border: '2px solid #EBEBEB',
-              borderTop: '2px solid #FF7B00',
-              borderRadius: '50%',
-              animation: 'spin 0.8s linear infinite',
-            }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        {hasMore && (
+          <div ref={catalogEnd} className="catalog-end" role="status">
+            {loadingMore && (
+              <>
+                <span className="catalog-loading-ring" aria-hidden="true" />
+                <span className="sr-only">Carregando mais produtos…</span>
+              </>
+            )}
           </div>
         )}
       </section>
 
       <ScrollToTopButton />
-    </main>
+    </div>
   )
 }
 
@@ -498,8 +408,36 @@ function DetalheProduto() {
 
   useEffect(() => { window.scrollTo(0, 0) }, [id])
 
-  const produto = produtos.find((p) => p.id === parseInt(id || '0'))
+  const { products, pending, status } = useCatalog()
+  const produto = products.find(product => String(product.id) === id) ??
+    (id ? products.find(product => Array.isArray(product.aliases) && product.aliases.includes(id)) : undefined)
+  const navigationSlot = useRef<HTMLDivElement>(null)
+  const [backPinned, setBackPinned] = useState(false)
 
+  useEffect(() => {
+    const slot = navigationSlot.current
+    if (!slot) return
+
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
+    const headerInset = 4.7 * rem + 1
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.rootBounds) setBackPinned(entry.boundingClientRect.top < entry.rootBounds.top)
+    }, { rootMargin: '-' + headerInset + 'px 0px 0px', threshold: 1 })
+
+    observer.observe(slot)
+    return () => observer.disconnect()
+  }, [produto])
+
+  const [optionId, setOptionId] = useState('')
+  const [stockChoice, setStockChoice] = useState<(StockChoice & { productId?: string })>()
+  const currentStockChoice = stockChoice?.productId === id ? stockChoice : undefined
+  const stockOptions = produto?.opcoesEstoque ?? []
+  const stock = resolveStockSelection(stockOptions, produto?.preco ?? null, currentStockChoice)
+  const chosenOption = stock ? stock.option : (
+    stockOptions.find(option => option.id === optionId) ??
+    stockOptions.find(option => option.price === produto?.preco) ?? stockOptions[0]
+  )
+  const chooseStock = (choice: StockChoice) => setStockChoice({ ...choice, productId: id })
   const [imgAtiva, setImgAtiva]       = useState(0)
   const [direction, setDirection]     = useState(0)
   const [selecoes, setSelecoes]       = useState<Record<string, string>>({})
@@ -547,13 +485,25 @@ function DetalheProduto() {
     }
   }, [corAtual, id]) // eslint-disable-line
 
-  let imagens: string[] = produto?.imagens?.length
-    ? produto.imagens
-    : ['https://via.placeholder.com/600x600?text=Sem+Foto']
-  if (corAtual && produto?.imagensPorCor?.[corAtual])
-    imagens = produto.imagensPorCor[corAtual]
+  const variantImages = corAtual ? produto?.imagensPorCor?.[corAtual] : undefined
+  const optionPhotographs = new Set(stockOptions.flatMap(option => option.images ?? []))
+  const genericImages = (produto?.imagens ?? []).filter(src => !optionPhotographs.has(src))
+  const fallbackImages = stock && produto ? resolveStockGallery({ ...produto, imagens: genericImages }, stock.color) :
+    variantImages ?? genericImages
+  const imagens = (chosenOption?.images ?? fallbackImages)
+    .filter(src => src && !src.includes('via.placeholder.com'))
+  const activeImageIndex = imgAtiva < imagens.length ? imgAtiva : 0
+  const activeImage = imagens[activeImageIndex]
 
-  useEffect(() => { setImgAtiva(0) }, [corAtual])
+  useEffect(() => { setImgAtiva(0) }, [corAtual, stock?.color, chosenOption?.id])
+
+  if (stock && (currentStockChoice?.color !== stock.color || currentStockChoice?.size !== stock.size)) {
+    chooseStock({ color: stock.color, size: stock.size })
+  }
+
+  if (!produto && pending) {
+    return <div className="catalog-detail-status" role="status">Carregando produto…</div>
+  }
 
   if (!produto || produto.disponivel === false) {
     return (
@@ -565,27 +515,49 @@ function DetalheProduto() {
     )
   }
 
-  const formatarPreco = (p: string | number) =>
-    typeof p === 'number'
-      ? p.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      : p || 'R$ 0,00'
-
   const mudarImagem = (acao: 'next' | 'prev' | number) => {
     setZoomIn(false)
-    if (acao === 'next')      { setDirection(1);  setImgAtiva(p => (p + 1) % imagens.length) }
-    else if (acao === 'prev') { setDirection(-1); setImgAtiva(p => (p - 1 + imagens.length) % imagens.length) }
-    else { setDirection(acao > imgAtiva ? 1 : -1); setImgAtiva(acao) }
+    if (acao === 'next')      { setDirection(1);  setImgAtiva((activeImageIndex + 1) % imagens.length) }
+    else if (acao === 'prev') { setDirection(-1); setImgAtiva((activeImageIndex - 1 + imagens.length) % imagens.length) }
+    else { setDirection(acao > activeImageIndex ? 1 : -1); setImgAtiva(acao) }
   }
 
-  const waBase = produto.linkwhatsapp || produto.linkWhatsapp || 'https://wa.me/5511999999999'
+  const waBase = produto.linkwhatsapp || produto.linkWhatsapp || 'https://wa.me/5511964467000'
   let variaveisTexto = ''
   if (corAtual) variaveisTexto += ` na cor ${corAtual}`
   const tamSel   = selecoes[nomeTamanho || ''] || variacoesExibidas.find(v => v.nome === nomeTamanho)?.opcoes[0] || ''
   const lenteSel = selecoes[nomeLente   || ''] || variacoesExibidas.find(v => v.nome === nomeLente)?.opcoes[0]   || ''
   if (tamSel && tamSel !== 'Único') variaveisTexto += `, tamanho ${tamSel}`
   if (lenteSel) variaveisTexto += `, lente ${lenteSel}`
-  const waLink = `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! Tenho interesse no produto: ${produto.nome}${variaveisTexto}`)}`
-  const mlLink = produto.linkMercadoLivre || 'https://www.mercadolivre.com.br'
+  if (chosenOption) variaveisTexto = ' — ' + chosenOption.label
+  const selectedPrice = chosenOption ? chosenOption.price : produto.preco
+  const needsSize = Boolean(stock && !stock.option)
+  const consultPrice = selectedPrice === null
+  const purchaseTitle = consultPrice ? 'Consulte o preço pelo WhatsApp' :
+    stock ? 'Compre pelo WhatsApp.' : 'Escolha onde comprar.'
+  const intent = consultPrice ? 'Gostaria de consultar o preço de' : 'Tenho interesse no produto:'
+  const waLink = `${waBase}${waBase.includes('?') ? '&' : '?'}text=${encodeURIComponent(`Olá! ${intent} ${produto.nome}${variaveisTexto}`)}`
+  const mlLink = consultPrice || stock ? undefined : produto.linkMercadoLivre
+  const formattedPrice = formatCatalogPrice(selectedPrice)
+  const namedOptions = (values: string[]) => values.map(value => ({ value, label: value }))
+  const variationGroups = stock
+    ? [
+      { nome: 'Cor', opcoes: namedOptions(stock.colors), selected: stock.color,
+        onSelect: (color: string) => chooseStock({ color, size: stock.size }) },
+      { nome: 'Tamanho', opcoes: namedOptions(stock.sizes), selected: stock.size,
+        onSelect: (size: string) => chooseStock({ color: stock.color, size }) },
+    ]
+    : chosenOption ? [{
+      nome: stockOptions.every(option => !option.color && (option.size
+        || /^(?:PP|P|M|G{1,3}|XG{1,2}|EG[1-3]?|G[1-4]|XS|S|L|X{1,3}L|\d{1,2}|Único)$/i.test(option.label.trim())))
+        ? 'Tamanho' : stockOptions.every(option => option.color && !option.size) ? 'Cor' : 'Variação',
+      opcoes: stockOptions.map(option => ({ value: option.id, label: option.label })),
+      selected: chosenOption.id,
+      onSelect: setOptionId,
+    }] : variacoesExibidas.map(({ nome, opcoes }) => ({
+      nome, opcoes: namedOptions(opcoes), selected: selecoes[nome] || opcoes[0],
+      onSelect: (value: string) => setSelecoes(previous => ({ ...previous, [nome]: value })),
+    }))
 
   const slideVariants = {
     enter:  (d: number) => ({ x: d > 0 ? 36 : -36, opacity: 0 }),
@@ -597,17 +569,19 @@ function DetalheProduto() {
     <>
       <main className="catalog-detail-page">
         <div className="wrap">
-          <nav className="catalog-detail-navigation" aria-label="Navegação do produto">
-            <button className="catalog-back-button" onClick={voltarParaVitrine}>
-              <ArrowLeft size={17} aria-hidden="true" />
-              <span>Voltar à vitrine</span>
-            </button>
-            <div className="catalog-breadcrumb" aria-label="Localização atual">
-              <span>Catálogo</span>
-              <span aria-hidden="true">/</span>
-              <span>{Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria}</span>
-            </div>
-          </nav>
+          <div ref={navigationSlot} className="catalog-detail-navigation-slot">
+            <nav className="catalog-detail-navigation" data-pinned={backPinned} aria-label="Navegação do produto">
+              <button type="button" className="catalog-back-button" onClick={voltarParaVitrine}>
+                <ArrowLeft size={17} aria-hidden="true" />
+                <span>Voltar à vitrine</span>
+              </button>
+              <div className="catalog-breadcrumb" aria-label="Localização atual">
+                <span>Catálogo</span>
+                <span aria-hidden="true">/</span>
+                <span>{Array.isArray(produto.categoria) ? produto.categoria[0] : produto.categoria}</span>
+              </div>
+            </nav>
+          </div>
 
           <div className="catalog-detail-grid">
 
@@ -621,12 +595,12 @@ function DetalheProduto() {
               <div className="catalog-thumbnail-list" aria-label="Imagens do produto">
                 {imagens.map((src, i) => (
                   <button
-                    className={`catalog-thumbnail${i === imgAtiva ? ' is-active' : ''}`}
+                    className={`catalog-thumbnail${i === activeImageIndex ? ' is-active' : ''}`}
                     key={i}
                     onMouseEnter={() => mudarImagem(i)}
                     onClick={() => mudarImagem(i)}
                     aria-label={`Ver imagem ${i + 1} de ${imagens.length}`}
-                    aria-pressed={i === imgAtiva}
+                    aria-pressed={i === activeImageIndex}
                   >
                     <img src={src} alt="" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center' }} />
                   </button>
@@ -636,27 +610,36 @@ function DetalheProduto() {
               <div
                 className="catalog-detail-media"
               >
-                <AnimatePresence initial={false} custom={direction}>
-                  <motion.img
-                    className="catalog-detail-main-image"
-                    key={imagens[imgAtiva]}
-                    src={imagens[imgAtiva]}
-                    alt={produto.nome}
-                    custom={direction}
-                    variants={slideVariants}
-                    initial="enter" animate="center" exit="exit"
-                    transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', padding: 0 }}
-                    draggable={false}
-                  />
-                </AnimatePresence>
-
-                <button
-                  type="button"
-                  className="catalog-media-zoom-target"
-                  onClick={() => setZoomAberto(true)}
-                  aria-label={`Ampliar imagem de ${produto.nome}`}
-                />
+                {activeImage ? (
+                  <>
+                    <AnimatePresence initial={false} custom={direction}>
+                      <motion.img
+                        className="catalog-detail-main-image"
+                        key={activeImage}
+                        src={activeImage}
+                        alt={produto.nome}
+                        custom={direction}
+                        variants={slideVariants}
+                        initial="enter" animate="center" exit="exit"
+                        transition={{ x: { type: 'spring', stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', padding: 0 }}
+                        draggable={false}
+                      />
+                    </AnimatePresence>
+    
+                    <button
+                      type="button"
+                      className="catalog-media-zoom-target"
+                      onClick={() => setZoomAberto(true)}
+                      aria-label={`Ampliar imagem de ${produto.nome}`}
+                    />
+                  </>
+                ) : (
+                  <div className="catalog-detail-photo-missing">
+                    <ImageOff size={30} strokeWidth={1.4} aria-hidden="true" />
+                    Foto indisponível
+                  </div>
+                )}
 
                 {imagens.length > 1 && (
                   <div className="catalog-gallery-controls" aria-label="Navegação da galeria">
@@ -670,7 +653,7 @@ function DetalheProduto() {
                     >
                       <ChevronLeft size={18} aria-hidden="true" />
                     </button>
-                    <span>{imgAtiva + 1} / {imagens.length}</span>
+                    <span>{activeImageIndex + 1} / {imagens.length}</span>
                     <button
                       type="button"
                       aria-label="Próxima imagem"
@@ -684,10 +667,12 @@ function DetalheProduto() {
                   </div>
                 )}
 
-                <span className="catalog-zoom-hint" aria-hidden="true">
-                  <ZoomIn size={15} />
-                  Ampliar
-                </span>
+                {activeImage && (
+                  <span className="catalog-zoom-hint" aria-hidden="true">
+                    <ZoomIn size={15} />
+                    Ampliar
+                  </span>
+                )}
               </div>
             </motion.div>
 
@@ -706,83 +691,99 @@ function DetalheProduto() {
                 {produto.nome}
               </h1>
 
-              <p className="catalog-detail-price">
-                {formatarPreco(produto.preco)}
+              <p className="catalog-detail-price" aria-live="polite" aria-atomic="true">
+                {!needsSize && (
+                  <span key={formattedPrice} className={consultPrice ? 'catalog-price-value is-consultation' : 'catalog-price-value'}>
+                    {formattedPrice}
+                  </span>
+                )}
               </p>
 
-              {variacoesExibidas.length > 0 && (
+              {variationGroups.length > 0 && (
                 <div className="catalog-variations">
-                  {variacoesExibidas.map(v => {
-                    const sel = selecoes[v.nome] || v.opcoes[0]
-                    return (
-                      <div className="catalog-variation-group" key={v.nome}>
-                        <p className="catalog-variation-label">
-                          <span>{v.nome}</span>
-                          <strong>{sel}</strong>
-                        </p>
-                        <div className="catalog-variation-options">
-                          {v.opcoes.map((opcao: string) => {
-                            const ativo = sel === opcao
-                            return (
-                              <button
-                                className={`catalog-variation-option${ativo ? ' is-active' : ''}`}
-                                key={opcao}
-                                onClick={() => setSelecoes(p => ({ ...p, [v.nome]: opcao }))}
-                                aria-pressed={ativo}
-                              >
-                                {opcao}
-                              </button>
-                            )
-                          })}
-                        </div>
+                  {variationGroups.map(({ nome, opcoes, selected, onSelect }) => (
+                    <div className="catalog-variation-group" key={nome} role="group" aria-label={nome}>
+                      <p className="catalog-variation-label">
+                        <span>{nome}</span>
+                        {selected && <strong>{opcoes.find(option => option.value === selected)?.label}</strong>}
+                      </p>
+                      <div className="catalog-variation-options">
+                        {opcoes.map(({ value, label }) => {
+                          const ativo = selected === value
+                          return (
+                            <button
+                              type="button"
+                              className={`catalog-variation-option${ativo ? ' is-active' : ''}`}
+                              key={value}
+                              onClick={() => onSelect(value)}
+                              aria-pressed={ativo}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
                 </div>
               )}
 
+              <ProductShopActions
+                key={String(produto.id) + '/' + (chosenOption?.id ?? '')}
+                product={produto}
+                optionId={chosenOption?.id ?? null}
+                canAdd={status === 'ready' && !needsSize && catalogPriceCents(selectedPrice) !== null}
+              />
+
               <section className="catalog-purchase-panel" aria-labelledby="catalog-purchase-title">
                 <div className="catalog-purchase-heading">
-                  <span className="catalog-purchase-kicker">Comprar agora</span>
-                  <h2 id="catalog-purchase-title">Escolha onde comprar.</h2>
+                  {!needsSize && <span className="catalog-purchase-kicker">{consultPrice ? 'Atendimento' : 'Comprar agora'}</span>}
+                  <h2 id="catalog-purchase-title" aria-live={stock ? 'polite' : undefined}>
+                    {needsSize ? 'Escolha um tamanho para comprar.' : purchaseTitle}
+                  </h2>
                 </div>
 
-                <div className="catalog-purchase-options">
+                {!needsSize && <div className="catalog-purchase-options">
                   <a
                     href={waLink} target="_blank" rel="noopener noreferrer"
                     className="catalog-purchase-card catalog-purchase-card-whatsapp"
-                    aria-label="Comprar pelo WhatsApp com até 8% OFF no PIX"
+                    aria-label={consultPrice ? 'Consultar preço pelo WhatsApp' :
+                      mlLink ? 'Comprar pelo WhatsApp com até 8% OFF no PIX' : 'Consultar e comprar pelo WhatsApp'}
                   >
                     <span className="catalog-purchase-brand catalog-purchase-brand-whatsapp" aria-hidden="true">
                       <WhatsappIcon />
                     </span>
                     <strong>WhatsApp</strong>
-                    <span className="catalog-purchase-offer">
-                      <BadgePercent size={13} aria-hidden="true" />
-                      <span>Até 8% OFF no PIX</span>
-                    </span>
+                    {mlLink && (
+                      <span className="catalog-purchase-offer">
+                        <BadgePercent size={13} aria-hidden="true" />
+                        <span>Até 8% OFF no PIX</span>
+                      </span>
+                    )}
                     <span className="catalog-purchase-arrow" aria-hidden="true">
                       <ExternalLink size={17} />
                     </span>
                   </a>
 
-                  <a
-                    href={mlLink} target="_blank" rel="noopener noreferrer"
-                    className="catalog-purchase-card catalog-purchase-card-marketplace"
-                    aria-label="Comprar pelo Mercado Livre"
-                  >
-                    <span className="catalog-purchase-brand catalog-purchase-brand-marketplace" aria-hidden="true">
-                      <img
-                        src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small@2x.png"
-                        alt=""
-                      />
-                    </span>
-                    <strong>Mercado Livre</strong>
-                    <span className="catalog-purchase-arrow" aria-hidden="true">
-                      <ExternalLink size={17} />
-                    </span>
-                  </a>
-                </div>
+                  {mlLink && (
+                    <a
+                      href={mlLink} target="_blank" rel="noopener noreferrer"
+                      className="catalog-purchase-card catalog-purchase-card-marketplace"
+                      aria-label="Comprar pelo Mercado Livre"
+                    >
+                      <span className="catalog-purchase-brand catalog-purchase-brand-marketplace" aria-hidden="true">
+                        <img
+                          src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small@2x.png"
+                          alt=""
+                        />
+                      </span>
+                      <strong>Mercado Livre</strong>
+                      <span className="catalog-purchase-arrow" aria-hidden="true">
+                        <ExternalLink size={17} />
+                      </span>
+                    </a>
+                  )}
+                </div>}
               </section>
             </motion.div>
           </div>
@@ -823,7 +824,7 @@ function DetalheProduto() {
       </main>
 
       {/* Modal zoom */}
-      {zoomAberto && (
+      {zoomAberto && activeImage && (
         <div
           onClick={() => { setZoomAberto(false); setZoomIn(false) }}
           style={{
@@ -882,8 +883,8 @@ function DetalheProduto() {
           >
             <AnimatePresence initial={false} custom={direction}>
               <motion.img
-                key={imagens[imgAtiva]}
-                src={imagens[imgAtiva]}
+                key={activeImage}
+                src={activeImage}
                 alt={produto.nome}
                 custom={direction}
                 variants={slideVariants}

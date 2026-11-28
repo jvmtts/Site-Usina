@@ -1,8 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/catalogo-admin.mjs": { "maxDuration": 300 },
+    "api/catalogo-sync.mjs": { "maxDuration": 300 }
+  },
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/:path((?!api(?:/|$)).*)",
       "destination": "/index.html"
     }
   ]

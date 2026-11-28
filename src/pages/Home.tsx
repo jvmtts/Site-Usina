@@ -25,7 +25,9 @@ import {
   X,
 } from 'lucide-react'
 import { patrocinadores, type Patrocinador } from '../data/patrocinadores'
-import { produtos, type Produto } from '../data/produtos'
+import type { Produto } from '../data/produtos'
+import { useCatalog } from '../catalog/catalogContext'
+import { formatCatalogPrice } from '../catalog/formatCatalogPrice'
 import BrandIntro from '../components/BrandIntro'
 import HeroMedia from '../components/HeroMedia'
 import { EXPEDITION_PATH } from '../config/routes'
@@ -289,7 +291,6 @@ const services: ServiceDefinition[] = [
   },
 ]
 
-const featuredProducts = produtos.filter((product) => product.disponivel).slice(0, 16)
 
 function getProductImage(product: Produto) {
   const colorImages = product.imagensPorCor
@@ -590,6 +591,8 @@ function ReportingContent() {
 }
 
 function ServicesSection() {
+  const { products, pending } = useCatalog()
+  const featuredProducts = products.filter(product => product.disponivel).slice(0, 16)
   const portalRef = useRef<HTMLDivElement | null>(null)
   const portalHasEntered = useInView(portalRef, {
     once: true,
@@ -898,7 +901,7 @@ function ServicesSection() {
                                 <span className="services-product-copy">
                                   <small className="mono">{getProductCategory(product)}</small>
                                   <strong>{product.nome}</strong>
-                                  <span>{String(product.preco)}</span>
+                                  <span>{formatCatalogPrice(product.preco)}</span>
                                 </span>
                                 <ArrowUpRight aria-hidden="true" size={18} />
                               </Link>
@@ -906,7 +909,7 @@ function ServicesSection() {
                           ))}
                         </div>
                       ) : (
-                        <p className="services-products-empty">Os produtos estão sendo atualizados. A vitrine completa continua disponível no catálogo.</p>
+                        <p className="services-products-empty">{pending ? 'Carregando produtos…' : 'Nenhum produto disponível no momento.'}</p>
                       )}
 
                       <Link to="/catalogo" className="services-products-more">

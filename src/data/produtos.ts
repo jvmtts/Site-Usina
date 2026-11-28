@@ -1,8 +1,11 @@
 export interface Produto {
-  id: number;
+  id: number | string;
+  aliases?: string[];
+  sku?: string;
+  opcoesEstoque?: { id: string; label: string; price: number | null; color?: string; size?: string; images?: string[] }[];
   nome: string;
   categoria: string | string[];
-  preco: string | number;
+  preco: string | number | null;
   descricao?: string;
   fichaTecnica?: Record<string, string>;
   imagens: string[];
