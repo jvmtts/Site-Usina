@@ -79,14 +79,16 @@ function AccessLayout({ title, children }: { title: string; children: ReactNode 
 
   return (
     <section className="account-access" aria-labelledby="account-access-title">
-      <figure className="account-access-image">
-        <figcaption>Expedição Angra × Paraty</figcaption>
-      </figure>
-      <div className="account-access-panel">
-        <div className="account-access-body">
-          <Link className="account-back" to="/catalogo"><ArrowLeft size={17} aria-hidden="true" />Catálogo</Link>
-          <h1 id="account-access-title" ref={headline} tabIndex={-1}>{title}</h1>
-          {children}
+      <div className="account-access-frame">
+        <figure className="account-access-image">
+          <figcaption>Expedição Angra × Paraty</figcaption>
+        </figure>
+        <div className="account-access-panel">
+          <div className="account-access-body">
+            <Link className="account-back" to="/catalogo"><ArrowLeft size={16} aria-hidden="true" />Voltar ao catálogo</Link>
+            <h1 id="account-access-title" ref={headline} tabIndex={-1}>{title}</h1>
+            {children}
+          </div>
         </div>
       </div>
     </section>
@@ -116,7 +118,7 @@ function PasswordField({ create = false, disabled = false, label = 'Senha' }: { 
 }
 
 const accessCopy = {
-  login: { title: 'Minha conta', description: 'Acompanhe seus pedidos e acesse seus favoritos e endereços.', button: 'Entrar' },
+  login: { title: 'Minha conta', description: 'Acesse seus pedidos, favoritos e endereços.', button: 'Entrar' },
   signup: { title: 'Criar conta', description: 'Use seu e-mail para criar uma conta na Usina do Jet.', button: 'Criar conta' },
   recover: { title: 'Recuperar senha', description: 'Informe o e-mail da sua conta para receber um link de recuperação.', button: 'Enviar link' },
 }
@@ -205,7 +207,7 @@ function AccessForm({ destination }: { destination: string }) {
       </form>
       <div className="account-access-switch">
         {mode === 'login' ? (
-          <>Primeira compra na Usina?{' '}
+          <>Ainda não tem conta?{' '}
             <button className="account-text-action" type="button" disabled={pending} onClick={() => switchMode('signup')}>
               Criar conta
             </button>
