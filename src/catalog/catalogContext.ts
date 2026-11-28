@@ -6,6 +6,5 @@ export type CatalogState = { products: Produto[]; status: 'loading' | 'ready' | 
 export const CatalogContext = createContext<CatalogState>({ products: produtos, status: 'ready' })
 
 export function useCatalog() {
-  const catalog = useContext(CatalogContext)
-  return { ...catalog, pending: catalog.status === 'loading' }
+  return useContext(CatalogContext)
 }

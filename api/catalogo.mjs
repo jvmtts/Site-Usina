@@ -15,4 +15,3 @@ export default {
     return Response.json({ status: 'indisponivel' }, { status: 503, headers })
   },
 }
-

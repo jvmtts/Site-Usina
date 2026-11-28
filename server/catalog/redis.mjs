@@ -61,4 +61,3 @@ export function redisCatalog({ url, token, namespace }, fetcher = fetch) {
     },
   }
 }
-

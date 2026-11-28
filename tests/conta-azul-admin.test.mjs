@@ -4,7 +4,7 @@ import { catalogAdmin } from '../server/catalog/admin.mjs'
 import { connectedCompany } from '../server/catalog/conta-azul.mjs'
 import { redisCatalog } from '../server/catalog/redis.mjs'
 import { publicCatalog, catalogService } from '../server/catalog/service.mjs'
-import { reveal, snapshotLifetime } from '../server/catalog/settings.mjs'
+import { catalogSettings, reveal, snapshotLifetime, storage } from '../server/catalog/settings.mjs'
 
 const origin = 'https://vitrine.example'
 const config = {
@@ -105,6 +105,8 @@ test('admin completes OAuth without displaying secrets and rejects forged or rep
   const page = await handler(request({ cookie }))
   assert.match(await page.text(), /Autorizar Conta Azul/)
   assert.equal(page.headers.get('cache-control'), 'no-store')
+  assert.equal(page.headers.get('referrer-policy'), 'same-origin')
+  assert.ok(page.headers.get('content-security-policy').includes('https://login.contaazul.com'))
 
   const auth = new URL((await post({ action: 'authorize' })).headers.get('location'))
   const state = new URLSearchParams(auth.hash.split('?')[1]).get('state')
@@ -115,6 +117,7 @@ test('admin completes OAuth without displaying secrets and rejects forged or rep
   assert.match(noSession.headers.get('location'), /invalid/)
   const callback = await handler(request({ query, cookie }))
   assert.equal(callback.headers.get('location'), '/api/catalogo-admin?status=connected')
+  assert.equal(callback.headers.get('referrer-policy'), 'no-referrer')
   const replay = await handler(request({ query, cookie }))
   assert.match(replay.headers.get('location'), /invalid/)
   assert.equal(exchangeCount(), 1)
@@ -249,3 +252,52 @@ test('Vercel handlers keep the public feed private and gate scheduled synchroniz
   }
 })
 
+test('a Vercel preview uses its stable branch URL and isolated Redis keys', async () => {
+  const env = {
+    VERCEL_ENV: 'preview',
+    VERCEL_BRANCH_URL: 'site-usina-git-preview.example',
+    CATALOG_ADMIN_KEY: config.adminKey,
+    CATALOG_ENCRYPTION_KEY: config.encryptionKey,
+    KV_REST_API_URL: 'https://cache.example',
+    KV_REST_API_TOKEN: 'test-storage-key',
+  }
+  const settings = catalogSettings(env)
+  assert.equal(settings.redirectUri, 'https://site-usina-git-preview.example/api/catalogo-admin')
+  const seenKeys = []
+  const fetchBefore = globalThis.fetch
+  globalThis.fetch = async (_url, request) => {
+    seenKeys.push(JSON.parse(request.body)[1])
+    return Response.json({ result: [null] })
+  }
+  try {
+    await storage(env).read('snapshot')
+    await storage({ ...env, VERCEL_BRANCH_URL: 'another-preview.example' }).read('snapshot')
+    await storage({ ...env, VERCEL_ENV: 'production' }).read('snapshot')
+  } finally {
+    globalThis.fetch = fetchBefore
+  }
+  assert.notEqual(seenKeys[0], seenKeys[1])
+  assert.match(seenKeys[0], /^usina:catalogo:preview-[a-f0-9]+:snapshot$/)
+  assert.equal(seenKeys[2], 'usina:catalogo:site-usina:snapshot')
+  const { handler } = fixture()
+  const alternate = 'https://deployment-id.example/api/catalogo-admin'
+  const canonical = await handler(new Request(alternate + '?code=do-not-forward'))
+  assert.equal(canonical.headers.get('location'), config.redirectUri)
+  assert.equal((await handler(new Request(alternate, { method: 'POST' }))).status, 403)
+})
+
+test('allows staged OAuth only on the production deployment URL explicitly enabled for setup', () => {
+  const env = {
+    VERCEL_ENV: 'production',
+    VERCEL_URL: 'site-usina-staged.vercel.app',
+    CATALOG_ORIGIN: config.origin,
+    CATALOG_ADMIN_KEY: config.adminKey,
+    CATALOG_ENCRYPTION_KEY: config.encryptionKey,
+    CATALOG_STAGED_ADMIN: '1',
+  }
+  const staged = 'https://site-usina-staged.vercel.app'
+  assert.equal(catalogSettings(env, staged).redirectUri, staged + '/api/catalogo-admin')
+  assert.equal(catalogSettings(env, 'https://another-site.vercel.app').origin, config.origin)
+  assert.equal(catalogSettings({ ...env, CATALOG_STAGED_ADMIN: '0' }, staged).origin, config.origin)
+  assert.equal(catalogSettings({ ...env, VERCEL_ENV: 'preview' }, staged).origin, config.origin)
+})

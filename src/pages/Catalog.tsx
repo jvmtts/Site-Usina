@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, type MouseEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Link, Routes, Route, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpRight, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, ImageOff, Search, X, ZoomIn } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, BadgePercent, ChevronLeft, ChevronRight, ExternalLink, ImageOff, Search, X, ZoomIn } from 'lucide-react'
 import type { Produto } from '@/data/produtos'
 import { useCatalog } from '@/catalog/catalogContext'
 import { formatCatalogPrice } from '@/catalog/formatCatalogPrice'
@@ -120,10 +120,7 @@ function CardProduto({ produto, priority }: { produto: Produto; priority: boolea
         <h3 id={'catalog-product-title-' + produto.id}>{produto.nome}</h3>
         <div className="catalog-product-footer">
           <p id={'catalog-product-price-' + produto.id} className="catalog-product-price">{price}</p>
-          <span className="catalog-card-cta" aria-hidden="true">
-            <span>Ver detalhes</span>
-            <span className="catalog-card-cta-arrow"><ArrowUpRight size={17} strokeWidth={1.8} /></span>
-          </span>
+          <span className="catalog-card-cta" aria-hidden="true">Ver detalhes</span>
         </div>
       </div>
     </Link>
@@ -131,7 +128,7 @@ function CardProduto({ produto, priority }: { produto: Produto; priority: boolea
 }
 
 function Vitrine() {
-  const { products } = useCatalog()
+  const { products, status } = useCatalog()
   const [busca, setBusca] = useState(() => sessionStorage.getItem('catalogBusca') || '')
   const [categoria, setCategoria] = useState(() => sessionStorage.getItem('catalogCategoria') || 'Todos')
   const [limite, setLimite] = useState(getInitialCatalogLimit)
@@ -346,7 +343,7 @@ function Vitrine() {
 
         <div className="catalog-results-header">
           <h2 id="catalog-results-title">{activeCategory === 'Todos' ? 'Todos os produtos' : activeCategory}</h2>
-          <span role="status">{filtrados.length} {filtrados.length === 1 ? 'produto' : 'produtos'}</span>
+          {status === 'ready' && <span role="status">{filtrados.length} {filtrados.length === 1 ? 'produto' : 'produtos'}</span>}
         </div>
 
         {mostrar.length ? (
@@ -363,6 +360,12 @@ function Vitrine() {
                 </motion.article>
               ))}
             </AnimatePresence>
+          </div>
+        ) : status !== 'ready' || products.length === 0 ? (
+          <div className="catalog-empty" role="status">
+            <h3>{status === 'loading' ? 'Consultando estoque…' :
+              status === 'unavailable' ? 'Estoque em atualização' : 'Nenhum produto disponível no momento'}</h3>
+            {status === 'unavailable' && <p>Volte em alguns instantes para conferir os produtos disponíveis.</p>}
           </div>
         ) : (
           <div className="catalog-empty">
@@ -408,7 +411,7 @@ function DetalheProduto() {
 
   useEffect(() => { window.scrollTo(0, 0) }, [id])
 
-  const { products, pending, status } = useCatalog()
+  const { products, status } = useCatalog()
   const produto = products.find(product => String(product.id) === id) ??
     (id ? products.find(product => Array.isArray(product.aliases) && product.aliases.includes(id)) : undefined)
   const navigationSlot = useRef<HTMLDivElement>(null)
@@ -501,8 +504,12 @@ function DetalheProduto() {
     chooseStock({ color: stock.color, size: stock.size })
   }
 
-  if (!produto && pending) {
+  if (!produto && status === 'loading') {
     return <div className="catalog-detail-status" role="status">Carregando produto…</div>
+  }
+
+  if (status === 'unavailable') {
+    return <div className="catalog-detail-status" role="status">Estoque em atualização. Volte em alguns instantes.</div>
   }
 
   if (!produto || produto.disponivel === false) {
@@ -626,7 +633,7 @@ function DetalheProduto() {
                         draggable={false}
                       />
                     </AnimatePresence>
-    
+
                     <button
                       type="button"
                       className="catalog-media-zoom-target"

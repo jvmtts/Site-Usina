@@ -1,6 +1,6 @@
 import { catalogService } from '../server/catalog/service.mjs'
 import { catalogSettings, safeEqual, storage } from '../server/catalog/settings.mjs'
-import { produtos } from '../src/data/produtos.ts'
+import { produtos } from '../src/data/produtos-base.mjs'
 
 const headers = { 'Cache-Control': 'no-store' }
 
@@ -22,4 +22,3 @@ export default {
     }
   },
 }
-

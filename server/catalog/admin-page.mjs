@@ -21,7 +21,7 @@ export const secureHeaders = {
   'X-Content-Type-Options': 'nosniff',
   'X-Robots-Tag': 'noindex, nofollow',
   'Referrer-Policy': 'no-referrer',
-  'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+  'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self' https://login.contaazul.com; base-uri 'none'; frame-ancestors 'none'",
 }
 
 const layout = `<!doctype html><html lang="pt-BR"><meta charset="utf-8">
@@ -78,7 +78,12 @@ function integrationScreen(status, redirectUri) {
     button('sync', 'Sincronizar estoque', { disabled: !status.connected }) + '</form>' +
     (report ? '<p><strong>' + esc(report.published) + '</strong> publicados de ' + esc(report.received) +
       ' cadastros ativos. ' + esc(report.linked) + ' vínculos com o site.</p>' +
+      (typeof report.examined === 'number' ? '<p>Produtos principais consultados: ' + esc(report.examined) + '.</p>' : '') +
+      (report.erpPhotos ? '<p>Fotos do Conta Azul: ' + esc(report.erpPhotos.downloaded + report.erpPhotos.reused) +
+        ' utilizadas de ' + esc(report.erpPhotos.candidates) + ' analisadas.</p>' : '') +
+      reportList('Preços a preencher', report.withoutPrice) +
       reportList('Produtos em revisão', report.review) + reportList('Produtos sem foto', report.withoutPhoto) +
+      reportList('Produtos sem descrição confirmada', report.withoutDescription) +
       reportList('Produtos do site sem vínculo', report.unmatchedLocal) : '') +
     '</section><form method="post" action="/api/catalogo-admin">' + button('logout', 'Sair', { secondary: true }) + '</form>'
 }
@@ -92,7 +97,7 @@ export function adminPage({ status, redirectUri, notice, unavailable } = {}) {
         button('login', 'Entrar') + '</form></section>'
   return new Response(layout + (Object.hasOwn(notes, notice) ? '<p class="notice" role="status">' + notes[notice] + '</p>' : '') +
     body + '</main></body></html>', {
-    status: unavailable ? 503 : 200, headers: { ...secureHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+    status: unavailable ? 503 : 200,
+    headers: { ...secureHeaders, 'Referrer-Policy': 'same-origin', 'Content-Type': 'text/html; charset=utf-8' },
   })
 }
-

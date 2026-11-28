@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { authorizationUrl, connectedCompany, exchangeToken, inventoryClient } from './conta-azul.mjs'
 import { buildSnapshot } from './snapshot.mjs'
+import { catalogPhotoCache } from './photos.mjs'
 import { protect, reveal, snapshotLifetime } from './settings.mjs'
 
 export function catalogService(store, config, manual, { exchange = exchangeToken, companyFor = connectedCompany,
-  inventoryFor = inventoryClient, now = Date.now } = {}) {
+  inventoryFor = inventoryClient, photoFetcher = fetch, now = Date.now } = {}) {
   const stamp = () => new Date(now()).toISOString()
   const credentials = async () => reveal(config, (await store.read('connection'))[0])
 
@@ -29,6 +30,7 @@ export function catalogService(store, config, manual, { exchange = exchangeToken
         await write({
           connection: protect(config, { clientId, clientSecret, revision: randomUUID() }),
           snapshot: null,
+          photos: null,
           sync: null,
         })
         return 'saved'
@@ -76,15 +78,23 @@ export function catalogService(store, config, manual, { exchange = exchangeToken
             current = { ...current, ...tokens }
             await write({ connection: protect(config, current) })
           }
-          const [previous] = await store.read('snapshot')
+          const [previous, previousPhotos] = await store.read('snapshot', 'photos')
+          const deadline = started + 260_000
+          const photos = catalogPhotoCache(store, previousPhotos, deadline, { fetcher: photoFetcher, now })
           const snapshot = await buildSnapshot({
-            client: inventoryFor(current.accessToken, { deadline: started + 260_000 }),
+            client: inventoryFor(current.accessToken, { deadline }),
             manual,
             previousBindings: previous?.bindings ?? {},
             configuredBindings: config.bindings,
+            imageFor: photos.cache,
             now: new Date(started),
           })
-          await write({ snapshot, sync: { state: 'updated', attempt } })
+          const erpPhotos = { ...photos.diagnostics(), reportedRecords: snapshot.report.recordsWithPhotoEntries }
+          snapshot.report.erpPhotos = erpPhotos
+          await write({ snapshot, ...photos.publication(snapshot), sync: { state: 'updated', attempt } })
+          if (process.env.VERCEL_ENV === 'preview') {
+            console.info('catalogo.fotos.conta-azul', JSON.stringify(erpPhotos))
+          }
           return 'updated'
         } catch (error) {
           const message = error instanceof Error && /^(O Conta Azul|A API|A coleta|Inventário|Vínculo)/.test(error.message)
@@ -105,4 +115,3 @@ export async function publicCatalog(store, now) {
       collected > currentTime || currentTime - collected >= snapshotLifetime) return null
   return { products: snapshot.catalog, updatedAt: snapshot.updatedAt }
 }
-

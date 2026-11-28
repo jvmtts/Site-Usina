@@ -4,7 +4,7 @@ import { createInterface } from 'node:readline/promises'
 import { Writable } from 'node:stream'
 import { inventoryClient } from '../server/catalog/conta-azul.mjs'
 import { buildSnapshot } from '../server/catalog/snapshot.mjs'
-import { produtos } from '../src/data/produtos.ts'
+import { produtos } from '../src/data/produtos-base.mjs'
 
 const directory = new URL('../.catalogo-local/', import.meta.url)
 const current = new URL('estoque.json', directory)
